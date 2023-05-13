@@ -4,41 +4,38 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 
 public class BinaryWriter {
-    public void writeEntry(Entry entry, String activeFile) {
+    public long writeEntry(Entry entry, RandomAccessFile activeFile) {
+        long pos = 0;
         try {
-            DataOutputStream out = new DataOutputStream(new FileOutputStream(activeFile));
-
-            //write the Entry in Pascal-style format
-            writePascalInteger(out, entry.keySize);
-            writePascalInteger(out, entry.valueSize);
-            writePascalInteger(out, entry.key);
-            writePascalInteger(out, entry.value);
-
-            out.close();
+            // write the Entry in Pascal-style format
+            writePascalString(activeFile, entry.key);
+            pos = writePascalString(activeFile, entry.value);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return pos;
     }
 
-    private void writePascalString(DataOutputStream out, String str) throws IOException {
+    private long writePascalString(RandomAccessFile activeFile, String str) throws IOException {
         byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
-        out.writeByte(bytes.length);
-        out.write(bytes);
+        activeFile.writeByte(bytes.length);
+        activeFile.write(bytes);
+        return activeFile.getFilePointer() - bytes.length;
     }
 
     /**
      *  writes the int value in little-endian format with the appropriate length prefix
      * */
-    private void writePascalInteger(DataOutputStream out, int value) throws IOException {
+    private void writePascalInteger(RandomAccessFile activeFile, int value) throws IOException {
         if (value >= -127 && value <= 127) {
-            out.writeByte(1);
-            out.writeByte(value);
+            activeFile.writeByte(1);
+            activeFile.writeByte(value);
         } else if (value >= -32767 && value <= 32767) {
-            out.writeByte(2);
-            out.writeShort(Short.reverseBytes((short)value));
+            activeFile.writeByte(2);
+            activeFile.writeShort(Short.reverseBytes((short)value));
         } else {
-            out.writeByte(4);
-            out.writeInt(Integer.reverseBytes(value));
+            activeFile.writeByte(4);
+            activeFile.writeInt(Integer.reverseBytes(value));
         }
     }
 }
