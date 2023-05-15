@@ -1,48 +1,86 @@
 package org.example;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.HashMap;
 
-public class Bitcask {
-    private final String BITCASK_DIRECTORY = "bitcask";
+public class Bitcask implements BitcaskIF {
+    private File BITCASK_DIRECTORY;
     private final long FILE_THRESHOLD = (long) 1e9;  // 1GB
-    private File activeFile;
-    private HashMap<Integer, Value> keyDir;
+    private RandomAccessFile activeFile;
+    private File fileID;
+    private final HashMap<String, MapValue> keyDir;
 
     public Bitcask() {
-        createNewFile();
+        BITCASK_DIRECTORY = new File("bitcask");
+        if (!BITCASK_DIRECTORY.exists())
+            BITCASK_DIRECTORY.mkdir();
         keyDir = new HashMap<>();
+        createNewFile();
     }
 
+    @Override
+    public String get(String key) {
+        MapValue mapValue = keyDir.get(key);
+        return readValue(mapValue);
+    }
+
+    @Override
+    public void put(String key, String value) {
+        try {
+            long valuePosition = append(new Entry(key, value));
+            MapValue mapValue = new MapValue(fileID, value.getBytes().length, valuePosition);
+            keyDir.put(key, mapValue);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void merge() {
+        /// TODO Compaction
+    }
     private void createNewFile() {
-        this.activeFile = new File(BITCASK_DIRECTORY + "/" + System.currentTimeMillis() + ".bin");
+        try {
+            fileID = new File(BITCASK_DIRECTORY + "/" + System.currentTimeMillis() + ".bin");
+            this.activeFile = new RandomAccessFile(fileID, "rw");
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
-    public void append(Entry entry) {
+    public long append(Entry entry) throws IOException {
         checkFileSize();
-        appendEntry(entry);
+        return appendEntry(entry);
     }
 
-    private void checkFileSize() {
+    private void checkFileSize() throws IOException {
         if (activeFile.length() >= FILE_THRESHOLD) {
+            activeFile.close();
             createNewFile();
         }
     }
 
-    private void appendEntry(Entry entry) {
+    private long appendEntry(Entry entry) {
         BinaryWriter binaryWriter = new BinaryWriter();
-        binaryWriter.writeEntry(entry, activeFile.getAbsolutePath());
+        return binaryWriter.writeEntry(entry, activeFile);
     }
 
-    public void readData() {
+    public String readValue(MapValue mapValue) {
         BinaryReader binaryReader = new BinaryReader();
-        binaryReader.readEntry(activeFile.getAbsolutePath());
+        return binaryReader.readValue(activeFile, mapValue);
     }
 
     public static void main(String[] args) {
         Bitcask bitcask = new Bitcask();
-        Entry entry = new Entry(4, 4, 1, 0);
-        bitcask.append(entry);
-        bitcask.readData();
+        String key = "weather_station_1";
+        String value = "station_id: 1, s_no: 1";
+
+        bitcask.put(key, value);
+        String outputValue = bitcask.get(key);
+
+        System.out.println(outputValue);
     }
 
 }
