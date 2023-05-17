@@ -1,7 +1,7 @@
 package org.example;
 
 public interface BitcaskIF {
-    public String get(String key);
-    public void put(String key, String value);
+    public byte[] get(Long key);
+    public void put(Long key, byte[] value);
     public void merge();
 }
