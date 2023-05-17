@@ -21,12 +21,13 @@
   </properties>
 
   <dependencies>
-  <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+  <!-- https://mvnrepository.com/artifact/io.confluent/kafka-avro-serializer -->
 <dependency>
-    <groupId>commons-io</groupId>
-    <artifactId>commons-io</artifactId>
-    <version>2.11.0</version>
+    <groupId>io.confluent</groupId>
+    <artifactId>kafka-avro-serializer</artifactId>
+    <version>5.5.0</version>
 </dependency>
+
 <!-- https://mvnrepository.com/artifact/io.confluent/kafka-avro-serializer -->
     <dependency>
       <groupId>junit</groupId>
@@ -48,11 +49,10 @@
 </dependency>
 <!-- https://mvnrepository.com/artifact/io.confluent/kafka-avro-serializer -->
 <dependency>
-    <groupId>io.cenonfluent</groupId>
-    <artifactId>kafka-avro-serializer</artifactId>
-    <version>5.3.0</version>
+     <groupId>io.confluent</groupId>
+     <artifactId>kafka-schema-rules</artifactId>
+     <version>7.4.0</version>
 </dependency>
-
   </dependencies>
 
   <build>
@@ -109,4 +109,10 @@
       </plugins>
     </pluginManagement>
   </build>
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
 </project>
