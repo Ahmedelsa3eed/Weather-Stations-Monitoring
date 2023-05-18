@@ -77,20 +77,29 @@ public class Bitcask implements BitcaskIF {
 
     public byte[] readValue(MapValue mapValue) {
         BinaryReader binaryReader = new BinaryReader();
-        return binaryReader.readValue(activeFile, mapValue);
+        return binaryReader.readEntry(activeFile, mapValue.getValuePosition()).getValue();
     }
 
     public static void main(String[] args) throws IOException {
         Bitcask bitcask = new Bitcask();
-        Long key = 12345L;
+        Long key1 = 12345L, key2 = 9738L;
         AvroIO avroIO = new AvroIO();
-        byte[] value = avroIO.serialize(avroIO.readAvroRecord());
+        avroIO.writeAvroRecord("src/main/resources/data.avro");
+        avroIO.writeAvroRecord("src/main/resources/data2.avro");
+        byte[] value1 = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data.avro"));
+        byte[] value2 = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data2.avro"));
 
-        bitcask.put(key, value);
 
-        byte[] outputValue = bitcask.get(key);
+        bitcask.put(key1, value1);
+        bitcask.put(key2, value2);
+
+        byte[] outputValue = bitcask.get(key1);
         System.out.println("len: " + outputValue.length);
         String output = new String(outputValue);
+        System.out.println(output);
+        outputValue = bitcask.get(key2);
+        System.out.println("len: " + outputValue.length);
+        output = new String(outputValue);
         System.out.println(output);
     }
 

@@ -29,12 +29,12 @@ public class AvroIO {
         }
     }
 
-    public void writeAvroRecord() throws IOException {
+    public void writeAvroRecord(String path) throws IOException {
         // Write avro data to a file
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
 
-        dataFileWriter.create(schema, new File("src/main/resources/data.avro"));
+        dataFileWriter.create(schema, new File(path));
 
         GenericRecord weatherMessage = new GenericData.Record(schema);
 
@@ -57,11 +57,11 @@ public class AvroIO {
         dataFileWriter.close();
     }
 
-    public GenericRecord readAvroRecord() throws IOException {
+    public GenericRecord readAvroRecord(String path) throws IOException {
         GenericRecord record = null;
         DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
         DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(
-                new File("src/main/resources/data.avro"), datumReader);
+                new File(path), datumReader);
 
         record = dataFileReader.next();
 
