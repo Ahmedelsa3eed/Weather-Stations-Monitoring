@@ -6,8 +6,9 @@ public class MapValue {
     private File fileID;
     private long valueSize;
     private long valuePosition;
+    private long timestamp;
 
-    public MapValue(File fileID, long valueSize, long valuePosition) {
+    public MapValue(File fileID, long valueSize, long valuePosition, long timestamp) {
         this.fileID = fileID;
         this.valueSize = valueSize;
         this.valuePosition = valuePosition;
@@ -23,5 +24,9 @@ public class MapValue {
 
     public long getValuePosition() {
         return valuePosition;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
     }
 }

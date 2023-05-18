@@ -37,8 +37,9 @@ public class Bitcask implements BitcaskIF {
     @Override
     public void put(Long stationId, byte[] weatherMessage) {
         try {
-            long valuePosition = append(new Entry(stationId, weatherMessage));
-            MapValue mapValue = new MapValue(fileID, weatherMessage.length, valuePosition);
+            // TODO make timestamps real
+            long valuePosition = append(new Entry(stationId, weatherMessage, 0L));
+            MapValue mapValue = new MapValue(fileID, weatherMessage.length, valuePosition, 0L);
             keyDir.put(stationId, mapValue);
         } catch (IOException e) {
             e.printStackTrace();
