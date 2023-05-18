@@ -5,19 +5,18 @@ import org.example.model.MapValue;
 import java.io.*;
 
 public class BinaryReader {
-    public byte[] readValue(RandomAccessFile activeFile, MapValue mapValue) {
+    public byte[] readValue(MapValue mapValue) {
         byte[] value = null;
         try {
-            long oldPosition = activeFile.getFilePointer();
+            RandomAccessFile file = new RandomAccessFile(mapValue.getFileID(), "r");
             long valuePosition = mapValue.getValuePosition();
 
-            activeFile.seek(valuePosition);
+            file.seek(valuePosition);
 
             byte[] buffer = new byte[(int) mapValue.getValueSize()];
-            activeFile.read(buffer);
-            // reset the file pointer after reading
-            activeFile.seek(oldPosition);
+            file.read(buffer);
             value = buffer;
+            file.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

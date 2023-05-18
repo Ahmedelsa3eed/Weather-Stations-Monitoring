@@ -21,6 +21,7 @@ public class Bitcask implements BitcaskIF {
     private final ConcurrentHashMap<Long, MapValue> keyDir;
 
     public Bitcask() {
+        /// TODO recover from previous state
         BITCASK_DIRECTORY = new File("bitcask");
         if (!BITCASK_DIRECTORY.exists())
             BITCASK_DIRECTORY.mkdir();
@@ -76,21 +77,6 @@ public class Bitcask implements BitcaskIF {
 
     public byte[] readValue(MapValue mapValue) {
         BinaryReader binaryReader = new BinaryReader();
-        return binaryReader.readValue(activeFile, mapValue);
+        return binaryReader.readValue(mapValue);
     }
-
-    public static void main(String[] args) throws IOException {
-        Bitcask bitcask = new Bitcask();
-        Long key = 12345L;
-        AvroIO avroIO = new AvroIO();
-        byte[] value = avroIO.serialize(avroIO.readAvroRecord());
-
-        bitcask.put(key, value);
-
-        byte[] outputValue = bitcask.get(key);
-        System.out.println("len: " + outputValue.length);
-        String output = new String(outputValue);
-        System.out.println(output);
-    }
-
 }
