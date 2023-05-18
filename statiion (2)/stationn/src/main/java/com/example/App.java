@@ -20,6 +20,7 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Properties;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -31,6 +32,7 @@ public class App
 {
     public static void main( String[] args )
     {
+        int station_id = 1;
         // Set up the producer properties
         Properties properties = new Properties();
         properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
@@ -46,19 +48,9 @@ public class App
         // Generate and send messages every 2 seconds
         App app = new App();
         int messageCount = 1;
+        
         while (true) {
-            GenericData.Record weatherData = new GenericData.Record(avroSchema);
-            weatherData.put("station_id", 1L);
-            weatherData.put("s_no", messageCount);
-            weatherData.put("battery_status", "low");
-            weatherData.put("status_timestamp", System.currentTimeMillis() / 1000L);
-
-            GenericData.Record weather = new GenericData.Record(avroSchema.getField("weather").schema());
-            weather.put("humidity", 35);
-            weather.put("temperature", 100);
-            weather.put("wind_speed", 13);
-
-            weatherData.put("weather", weather);
+            GenericData.Record weatherData = app.createMessage(avroSchema, messageCount, station_id);
             byte[] array;
             try {
                 array = app.genericRecordToByteArray(weatherData,avroSchema);
@@ -81,6 +73,36 @@ public class App
         // Close the Kafka producer
         
      }
+     private String randomBattery(){
+        Random random = new Random();
+        Double p  = random.nextDouble();
+        if( p < 0.3 ) {  //you might want to cache the Random instance
+            return "Low";
+        }
+        else if(p < .6){
+            return "High";
+        }
+        else{
+            return "Medium";
+        }
+     }
+     private GenericData.Record createMessage(Schema schema,int messageCount,int station_id){
+        GenericData.Record weatherData = new GenericData.Record(schema); 
+        Random random = new Random();
+        weatherData.put("station_id", station_id);
+        weatherData.put("s_no", messageCount);
+        String battery = randomBattery();
+        weatherData.put("battery_status", battery);
+        weatherData.put("status_timestamp", System.currentTimeMillis() / 1000L);
+
+        GenericData.Record weather = new GenericData.Record(schema.getField("weather").schema());
+        weather.put("humidity", random.nextInt(101));
+        weather.put("temperature", -20 + (40 + 20) * random.nextInt());
+        weather.put("wind_speed", random.nextInt(120 - 0 + 1) + 0);
+
+        weatherData.put("weather", weather);
+        return weatherData;
+    }
      private static byte[] genericRecordToByteArray(GenericData.Record record, Schema schema) throws IOException {
 
         // Create an AvroDatumWriter with the schema
