@@ -60,13 +60,10 @@ public class AvroIO {
     public GenericRecord readAvroRecord() throws IOException {
         GenericRecord record = null;
         DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
-        DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(new File("src/main/resources/data.avro"), datumReader);
+        DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(
+                new File("src/main/resources/data.avro"), datumReader);
 
-        while (dataFileReader.hasNext()) {
-            record = dataFileReader.next();
-            // Access individual fields using record.get("fieldName")
-            System.out.println(record.get("stationId"));
-        }
+        record = dataFileReader.next();
 
         dataFileReader.close();
         return record;
@@ -87,8 +84,6 @@ public class AvroIO {
 
             // Get the serialized binary data
             binaryRecord = outputStream.toByteArray();
-
-            System.out.println("Avro record has been serialized to binary format.");
         } catch (IOException e) {
             e.printStackTrace();
         }
