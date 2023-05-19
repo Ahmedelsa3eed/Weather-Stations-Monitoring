@@ -1,40 +1,48 @@
 package org.example;
 
+import org.example.io.AvroIO;
+import org.example.io.BinaryReader;
+import org.example.io.BinaryWriter;
+import org.example.model.Entry;
+import org.example.model.MapValue;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Bitcask implements BitcaskIF {
     private File BITCASK_DIRECTORY;
     private final long FILE_THRESHOLD = (long) 1e9;  // 1GB
     private RandomAccessFile activeFile;
     private File fileID;
-    private final HashMap<String, MapValue> keyDir;
+    // keyDir key: StationID, value: <fileID, valueSize, valuePosition>
+    private final ConcurrentHashMap<Long, MapValue> keyDir;
 
     public Bitcask() {
+        /// TODO recover from previous state
         BITCASK_DIRECTORY = new File("bitcask");
         if (!BITCASK_DIRECTORY.exists())
             BITCASK_DIRECTORY.mkdir();
-        keyDir = new HashMap<>();
+        keyDir = new ConcurrentHashMap<>();
         createNewFile();
     }
 
     @Override
-    public String get(String key) {
+    public byte[] get(Long key) {
         MapValue mapValue = keyDir.get(key);
         return readValue(mapValue);
     }
 
     @Override
-    public void put(String key, String value) {
+    public void put(Long stationId, byte[] weatherMessage) {
         try {
-            long valuePosition = append(new Entry(key, value));
-            MapValue mapValue = new MapValue(fileID, value.getBytes().length, valuePosition);
-            keyDir.put(key, mapValue);
+            long valuePosition = append(new Entry(stationId, weatherMessage));
+            MapValue mapValue = new MapValue(fileID, weatherMessage.length, valuePosition);
+            keyDir.put(stationId, mapValue);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
     }
 
@@ -47,7 +55,7 @@ public class Bitcask implements BitcaskIF {
             fileID = new File(BITCASK_DIRECTORY + "/" + System.currentTimeMillis() + ".bin");
             this.activeFile = new RandomAccessFile(fileID, "rw");
         } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
     }
     public long append(Entry entry) throws IOException {
@@ -64,23 +72,11 @@ public class Bitcask implements BitcaskIF {
 
     private long appendEntry(Entry entry) {
         BinaryWriter binaryWriter = new BinaryWriter();
-        return binaryWriter.writeEntry(entry, activeFile);
+        return binaryWriter.writeEntry(activeFile, entry);
     }
 
-    public String readValue(MapValue mapValue) {
+    public byte[] readValue(MapValue mapValue) {
         BinaryReader binaryReader = new BinaryReader();
-        return binaryReader.readValue(activeFile, mapValue);
+        return binaryReader.readValue(mapValue);
     }
-
-    public static void main(String[] args) {
-        Bitcask bitcask = new Bitcask();
-        String key = "weather_station_1";
-        String value = "station_id: 1, s_no: 1";
-
-        bitcask.put(key, value);
-        String outputValue = bitcask.get(key);
-
-        System.out.println(outputValue);
-    }
-
 }
