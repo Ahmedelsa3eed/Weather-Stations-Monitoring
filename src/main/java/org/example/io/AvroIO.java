@@ -18,7 +18,7 @@ import java.io.File;
 import java.io.IOException;
 
 public class AvroIO {
-    Schema schema;
+    private Schema schema;
     public AvroIO() {
         try {
             this.schema = new Schema.Parser().parse(
@@ -27,6 +27,10 @@ public class AvroIO {
         catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public Schema getSchema() {
+        return schema;
     }
 
     public void writeAvroRecord() throws IOException {

@@ -1,6 +1,5 @@
 package org.example;
 
-import org.example.io.AvroIO;
 import org.example.io.BinaryReader;
 import org.example.io.BinaryWriter;
 import org.example.model.Entry;
