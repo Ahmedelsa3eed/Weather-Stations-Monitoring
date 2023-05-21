@@ -7,10 +7,7 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.BinaryEncoder;
-import org.apache.avro.io.DatumReader;
-import org.apache.avro.io.DatumWriter;
-import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.io.*;
 import org.apache.avro.specific.SpecificDatumWriter;
 
 import java.io.ByteArrayOutputStream;
@@ -29,7 +26,7 @@ public class AvroIO {
         }
     }
 
-    public void writeAvroRecord(String path) throws IOException {
+    public GenericRecord writeAvroRecord(String path, Long stationId) throws IOException {
         // Write avro data to a file
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
@@ -39,7 +36,7 @@ public class AvroIO {
         GenericRecord weatherMessage = new GenericData.Record(schema);
 
         // Set values for the fields of the weather message
-        weatherMessage.put("stationId", 123456L);
+        weatherMessage.put("stationId", stationId);
         weatherMessage.put("serialNumber", 7890L);
         weatherMessage.put("batteryStatus", "low");
         weatherMessage.put("statusTimestamp", System.currentTimeMillis());
@@ -55,6 +52,8 @@ public class AvroIO {
 
         dataFileWriter.append(weatherMessage);
         dataFileWriter.close();
+
+        return weatherMessage;
     }
 
     public GenericRecord readAvroRecord(String path) throws IOException {
@@ -88,5 +87,17 @@ public class AvroIO {
             e.printStackTrace();
         }
         return binaryRecord;
+    }
+
+    public GenericRecord deserialize(byte[] messageBytes) {
+        GenericRecord message = null;
+        try {
+            DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
+            Decoder decoder = DecoderFactory.get().binaryDecoder(messageBytes, null);
+            message = datumReader.read(null, decoder);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return message;
     }
 }

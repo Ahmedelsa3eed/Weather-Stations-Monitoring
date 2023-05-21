@@ -1,5 +1,6 @@
 package org.example;
 
+import org.apache.avro.generic.GenericRecord;
 import org.example.io.AvroIO;
 import org.example.io.BinaryReader;
 import org.example.io.BinaryWriter;
@@ -36,11 +37,13 @@ public class Bitcask implements BitcaskIF {
     }
 
     @Override
-    public void put(Long stationId, byte[] weatherMessage) {
+    public void put(GenericRecord weatherMessage) {
         try {
-            // TODO make timestamps real
-            long valuePosition = append(new Entry(stationId, weatherMessage, 0L));
-            MapValue mapValue = new MapValue(fileID, weatherMessage.length, valuePosition, 0L);
+            Long stationId = (Long) weatherMessage.get("stationId");
+            Long statusTimestamp = (Long) weatherMessage.get("statusTimestamp");
+            byte[] serializedMessage = new AvroIO().serialize(weatherMessage);
+            long valuePosition = append(new Entry(stationId, serializedMessage, statusTimestamp));
+            MapValue mapValue = new MapValue(fileID, serializedMessage.length, valuePosition, statusTimestamp);
             keyDir.put(stationId, mapValue);
         } catch (IOException e) {
             e.printStackTrace();
@@ -85,19 +88,17 @@ public class Bitcask implements BitcaskIF {
         Bitcask bitcask = new Bitcask();
         Long key1 = 12345L, key2 = 9738L;
         AvroIO avroIO = new AvroIO();
-        avroIO.writeAvroRecord("src/main/resources/data.avro");
-        avroIO.writeAvroRecord("src/main/resources/data2.avro");
-        byte[] value1 = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data.avro"));
-        byte[] value2 = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data2.avro"));
+        GenericRecord record1 = avroIO.writeAvroRecord("src/main/resources/data.avro", key1);
+        GenericRecord record2 = avroIO.writeAvroRecord("src/main/resources/data2.avro", key2);
 
-
-        bitcask.put(key1, value1);
-        bitcask.put(key2, value2);
+        bitcask.put(record1);
+        bitcask.put(record2);
 
         byte[] outputValue = bitcask.get(key1);
         System.out.println("len: " + outputValue.length);
         String output = new String(outputValue);
         System.out.println(output);
+
         outputValue = bitcask.get(key2);
         System.out.println("len: " + outputValue.length);
         output = new String(outputValue);

@@ -1,3 +1,5 @@
 .idea
 target
 bitcask
+Archive
+src/main/resources/*.avro
