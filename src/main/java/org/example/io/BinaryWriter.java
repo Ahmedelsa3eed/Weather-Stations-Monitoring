@@ -14,8 +14,10 @@ public class BinaryWriter {
     public long writeEntry(RandomAccessFile activeFile, Entry entry) {
         long pos = 0;
         try {
-            writeLong(activeFile, entry.getKey());
-            pos = writeRecord(activeFile, entry.getValue());
+            pos = activeFile.getFilePointer();
+//            writeLong(activeFile, entry.getKey());
+//            pos = writeRecord(activeFile, entry.getValue());
+            activeFile.write(entry.toByteArray());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -23,9 +25,7 @@ public class BinaryWriter {
     }
 
     private void writeLong(RandomAccessFile activeFile, Long value) throws IOException {
-        String stringValue = String.valueOf(value);
-        activeFile.writeByte(stringValue.length());
-        activeFile.writeBytes(stringValue);
+        activeFile.writeLong(value);
     }
 
     private long writeRecord(RandomAccessFile accessFile, byte[] weatherMessage) throws IOException {

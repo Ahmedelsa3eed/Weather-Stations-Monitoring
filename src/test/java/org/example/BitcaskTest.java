@@ -13,7 +13,8 @@ class BitcaskTest {
     void testCorrectWriting() throws IOException {
         Long key = 12345L;
         AvroIO avroIO = new AvroIO();
-        byte[] inputValue = avroIO.serialize(avroIO.readAvroRecord());
+        avroIO.writeAvroRecord("src/main/resources/data1.avro");
+        byte[] inputValue = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data1.avro"));
 
         bitcask.put(key, inputValue);
         byte[] outputValue = bitcask.get(key);
@@ -24,8 +25,10 @@ class BitcaskTest {
     void testCorrectTwoConsecutiveWriting() throws IOException {
         Long key1 = 12345L, key2 = 12346L;
         AvroIO avroIO = new AvroIO();
-        byte[] inputValue1 = avroIO.serialize(avroIO.readAvroRecord());
-        byte[] inputValue2 = avroIO.serialize(avroIO.readAvroRecord());
+        avroIO.writeAvroRecord("src/main/resources/data.avro");
+        avroIO.writeAvroRecord("src/main/resources/data2.avro");
+        byte[] inputValue1 = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data.avro"));
+        byte[] inputValue2 = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data2.avro"));
 
         bitcask.put(key1, inputValue1);
         bitcask.put(key2, inputValue2);
