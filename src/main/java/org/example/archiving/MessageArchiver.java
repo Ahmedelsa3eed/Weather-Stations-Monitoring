@@ -1,110 +1,105 @@
-package org.example.archiving;
+// package org.example.archiving;
 
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.hadoop.fs.Path;
-import org.example.io.AvroIO;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
-
-import org.apache.spark.SparkConf;
-import org.apache.spark.sql.*;
-public class MessageArchiver {
-    String avroSchemaString = "{\"type\":\"record\",\"name\":\"WeatherData\",\"fields\":[{\"name\":\"station_id\",\"type\":\"long\"},{\"name\":\"s_no\",\"type\":\"long\"},{\"name\":\"battery_status\",\"type\":\"string\"},{\"name\":\"status_timestamp\",\"type\":\"long\"},{\"name\":\"weather\",\"type\":{\"type\":\"record\",\"name\":\"Weather\",\"fields\":[{\"name\":\"humidity\",\"type\":\"int\"},{\"name\":\"temperature\",\"type\":\"int\"},{\"name\":\"wind_speed\",\"type\":\"int\"}]}}]}";
-    Schema avroSchema = new Schema.Parser().parse(avroSchemaString);
-    private WeatherParquetWriter writer;
-    private Path archivePath = new Path("Archive/weather.parquet");
-    public static void main(String[] args) {
-        SparkConf conf= new SparkConf().setAppName("Java Spark").setMaster("local[*]");
-        // Create a SparkSession
-        SparkSession spark = SparkSession.builder()
+// import org.apache.avro.Schema;
+// import org.example.archiving.Modules.DTO.WeatherDataDTO;
+// import org.example.archiving.Modules.entity.Weather;
+// import org.example.archiving.Modules.entity.WeatherData;
+// import org.example.archiving.ParquetWriter.SparkParquetWriter;
+// import java.util.ArrayList;
+// import java.util.List;
+// public class MessageArchiver {
+//     static String avroSchemaString = "{\"type\":\"record\",\"name\":\"WeatherData\",\"fields\":[{\"name\":\"station_id\",\"type\":\"long\"},{\"name\":\"s_no\",\"type\":\"long\"},{\"name\":\"battery_status\",\"type\":\"string\"},{\"name\":\"status_timestamp\",\"type\":\"long\"},{\"name\":\"weather\",\"type\":{\"type\":\"record\",\"name\":\"Weather\",\"fields\":[{\"name\":\"humidity\",\"type\":\"int\"},{\"name\":\"temperature\",\"type\":\"int\"},{\"name\":\"wind_speed\",\"type\":\"int\"}]}}]}";
+//     static Schema avroSchema = new Schema.Parser().parse(avroSchemaString);
+//     public static void main(String[] args) {
+//         WeatherDataDTO weatherDataDTO = new WeatherDataDTO(avroSchema);
+//         SparkParquetWriter sparkParquetWriter = SparkParquetWriter.getInstance(avroSchema);
         
-        .appName("Java Spark SQL basic example").config("spark.master", "local")
-        .getOrCreate();
-
-        // Sample Avro record schema
-        String avroSchemaString = "{\"type\":\"record\",\"name\":\"User\",\"fields\":[{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"age\",\"type\":\"int\"}]}";
-        Schema avroSchema = new Schema.Parser().parse(avroSchemaString);
-
-        // Create a new Avro record
-        GenericRecord avroRecord = createMessage(avroSchema, 0, 0);
-
-        // Convert Avro record to DataFrame
-        Dataset<Row> avroRecordDF = spark.createDataset(Collections.singletonList(avroRecord), Encoders.bean(GenericRecord.class)).toDF();
-        // Define the Parquet file path
-        String parquetFilePath = "/output.parquet";
-
-        // Write the DataFrame to Parquet file
-        avroRecordDF.write().mode(SaveMode.Append).parquet(parquetFilePath);
-
-        // Stop the SparkSession
-        spark.stop();
-    }
-//     public MessageArchiver() throws IOException {
-//         AvroIO avroIO = new AvroIO();
-//         schema = avroIO.getSchema();
-//         writer = new WeatherParquetWriter(archivePath, schema);
+//         Weather weather = Weather.builder()
+//         .humidity(50)
+//         .temperature(90)
+//         .wind_speed(100)
+//         .build();
+//         WeatherData weatherData = WeatherData.builder()
+//         .weather(weather)
+//         .battery_status("low")
+//         .s_no(1)
+//         .station_id(1)
+//         .status_timestamp(1)
+//         .build();
+//         List<WeatherData> weatherDatas = new ArrayList<>();
+//         for(int i =0 ;i<100000;i++){ 
+//             weatherDatas.add(weatherData);
+//         }
+//         sparkParquetWriter.write(weatherDatas, 30);
 //     }
 
-//     public void archiveMessage(GenericRecord record) throws IOException {
-//         writer.write(record);
-//         writer.closeWriter(); // TODO: Close after exceeding a certain size
-//     }
+//     // public static void main(String[] args) {
+//     //     SparkConf conf = new SparkConf().setAppName("Java Spark").setMaster("local[*]");
+//     //     JavaSparkContext sparkContext = new JavaSparkContext(conf);
+//     //     SparkSession spark = SparkSession.builder()
+//     //             .appName("Java Spark SQL basic example")
+//     //             .config(conf)
+//     //             .getOrCreate();
 
-//     /**
-//      * For testing purposes
-//      * */
-//     public List<GenericRecord> readMessages() throws IOException {
-//         WeatherParquetReader reader = new WeatherParquetReader(archivePath);
-//         return reader.read();
-//     }
+//     //     // Convert Avro schema to Spark schema
+//     //     List<WeatherData> weatherDataList = new ArrayList<>();
+       
+//     //     for(int i =10000 ;i<20000;i++){ 
+//     //         GenericData.Record createMessageA = createAMessage(avroSchema, i, 0);
 
-//     private void partition() {
-//         // TODO Partition the data by year, month, and day
-//         // Write the data to a partitioned parquet file
-// //        URI partition = URI.create("2020-01-01T00");
-// //        String path = partition.getPath();
-// //        File parentFolder = new File(path);
-// //        parentFolder.mkdirs();
-// //        File partitionFile = new File(parentFolder, "parquet0000");
-// //        Path filePath = new Path(partitionFile.toURI());
-//     }
+//     //         WeatherData weatherData = avroMapper(createMessageA, i, 0);
 
-//     public static void main(String[] args) throws IOException {
-// //        MessageArchiver archiver = new MessageArchiver();
-// //        AvroIO avroIO = new AvroIO();
-// //        GenericRecord record = avroIO.readAvroRecord();
-// //
-// //        archiver.archiveMessage(record);
+//     //         weatherDataList.add(weatherData); 
+//     //     }
+  
+//     //     // Create RDD of WeatherData objects
+//     //     JavaRDD<WeatherData> weatherDataRDD = sparkContext.parallelize(weatherDataList);
 
-// //        List<GenericRecord> records = archiver.readMessages();
-// //
-// //        if (record == records.get(0)) {
-// //            System.out.println("Success!");
-// //        } else {
-// //            System.out.println("Failure!");
-// //        }
-//     
-static GenericData.Record createMessage(Schema schema,int messageCount,int station_id){
-    GenericData.Record weatherData = new GenericData.Record(schema); 
-    Random random = new Random();
-    weatherData.put("station_id", station_id);
-    weatherData.put("s_no", messageCount);
-    
-    weatherData.put("battery_status", "battery");
-    weatherData.put("status_timestamp", System.currentTimeMillis());
+//     //     // Create DataFrame using the converted Spark schema
+//     //     Dataset<Row> avroRecordDF = spark.createDataFrame(weatherDataRDD, WeatherData.class);
+//     //     System.out.println();
+//     //     System.out.println(avroRecordDF);
+//     //     String parquetFilePath = "/home/elsaber/Downloads/Project/Weather-Stations-Monitoring/src/main/java/org/example/archiving/output.parquet";
 
-    GenericData.Record weather = new GenericData.Record(schema.getField("weather").schema());
-    weather.put("humidity", random.nextInt(101));
-    // weather.put("humidity", 90);
-    weather.put("temperature", -20 + (40 + 20) * random.nextInt());
-    weather.put("wind_speed", random.nextInt(120 - 0 + 1) + 0);
+//     //     avroRecordDF.write().mode(SaveMode.Append).parquet(parquetFilePath);
 
-    weatherData.put("weather", weather);
-    return weatherData;
-    }
-}
+//     //     spark.stop();
+//     //     sparkContext.close();
+//     //     sparkContext.stop();
+
+//     // }
+//     // static GenericData.Record createAMessage(Schema schema,int messageCount,int station_id){
+//     //     GenericData.Record weatherData = new GenericData.Record(schema); 
+//     //     Random random = new Random();
+//     //     weatherData.put("station_id", station_id);
+//     //     weatherData.put("s_no", messageCount);
+//     //     // String battery = randomBattery();
+//     //     weatherData.put("battery_status", "batter111111111y");
+//     //     weatherData.put("status_timestamp", System.currentTimeMillis());
+
+//     //     GenericData.Record weather = new GenericData.Record(schema.getField("weather").schema());
+//     //     weather.put("humidity", random.nextInt(101));
+//     //     // weather.put("humidity", 90);
+//     //     weather.put("temperature", -20 + (40 + 20) * random.nextInt());
+//     //     weather.put("wind_speed", random.nextInt(120 - 0 + 1) + 0);
+
+//     //     weatherData.put("weather", weather);
+//     //     return weatherData;
+//     // }
+//     // static WeatherData avroMapper(GenericRecord avRecord, int messageCount, int station_id) {
+//     //     WeatherData weatherData = new WeatherData();
+//     //     weatherData.setStation_id((Integer) avRecord.get("station_id"));
+//     //     weatherData.setS_no((int)avRecord.get("s_no"));
+//     //     weatherData.setBattery_status((String) avRecord.get("battery_status"));
+//     //     weatherData.setStatus_timestamp((long) avRecord.get("status_timestamp"));
+
+//     //     Weather weather = new Weather();
+//     //     GenericRecord avroWeather = ((GenericRecord) avRecord.get("weather"));
+//     //     weather.setHumidity((int) avroWeather.get("humidity"));
+//     //     weather.setTemperature((int) avroWeather.get("temperature"));
+//     //     weather.setWind_speed((int)avroWeather.get("wind_speed"));
+
+//     //     weatherData.setWeather(weather);
+//     //     return weatherData;
+//     // }
+// }
