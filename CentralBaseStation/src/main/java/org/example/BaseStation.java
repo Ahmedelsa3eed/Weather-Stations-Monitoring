@@ -20,13 +20,13 @@ public class BaseStation {
         bitcask = new Bitcask();
     }
 
-    public void consumeMessage() {
+    public void consumeMessages() {
         // Set up the consumer properties
         Properties properties = new Properties();
         properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-
+        properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "test");
         KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(properties);
         consumer.subscribe(Collections.singletonList("try"));
 
@@ -50,5 +50,10 @@ public class BaseStation {
     private void processMessage(GenericRecord message) {
         bitcask.put(message);
         // TODO archive records in batches
+    }
+
+    public static void main(String[] args) {
+        BaseStation baseStation = new BaseStation();
+        baseStation.consumeMessages();
     }
 }
