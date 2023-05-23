@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.io.AvroIO;
 import org.example.io.BinaryReader;
 import org.example.io.BinaryWriter;
 import org.example.model.Entry;
@@ -63,6 +64,7 @@ public class Compactor implements Runnable{
         readCaskFiles(caskFiles);
 
         List<HintWeatherEntry> hintWeatherEntries = new LinkedList<>();
+        Map<Long, MapValue> mapValues = new HashMap<>();
         int n = 0;
         StringBuffer fileName = new StringBuffer();
         File newFile = generateNewFileName(fileName);
@@ -71,18 +73,55 @@ public class Compactor implements Runnable{
             for(Map.Entry<Long, Entry> mapEntry: latest.entrySet()){
                 Entry entry = mapEntry.getValue();
                 long pos = binaryWriter.writeEntry(randomAccessFile, entry);
-                hintWeatherEntries.add(new HintWeatherEntry(entry.getTimestamp(), (byte) entry.getValue().length, (int) pos, entry.getKey()));
+                int valLength = entry.getValue().length;
+                hintWeatherEntries.add(
+                        new HintWeatherEntry(entry.getTimestamp(), (byte) valLength, (int) pos, entry.getKey()));
+                mapValues.put(entry.getKey(),
+                        new MapValue(newFile, valLength, (int) pos, entry.getTimestamp()));
                 if(maximumSizeReached(newFile, randomAccessFile)){
                     // write hint file and update new file
                     writeHint(hintWeatherEntries, fileName);
                     newFile = generateNewFileName(fileName);
+                    randomAccessFile.close();
                     randomAccessFile = new RandomAccessFile(newFile, "rw");
                 }
             }
             writeHint(hintWeatherEntries, fileName);
+            randomAccessFile.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        for(Map.Entry<Long, MapValue> entry: mapValues.entrySet()){
+            MapValue oldMapValue = keyDir.get(entry.getKey());
+            if(oldMapValue == null || oldMapValue.getTimestamp() < entry.getValue().getTimestamp())
+                keyDir.put(entry.getKey(), entry.getValue());
+        }
+
+        for(File file: caskFiles)
+            while(!file.delete());
+
+        for(File file: hintFiles)
+            while(!file.delete());
+
+        for(Map.Entry<Long, Entry> entry:latest.entrySet()){
+            try {
+                System.out.println("ID = " + entry.getKey() + "\n\t VAL = " + AvroIO.deserialize(entry.getValue().getValue()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private byte[] readValue(MapValue mapValue) {
+        BinaryReader binaryReader = new BinaryReader();
+        try {
+            RandomAccessFile activeFile = new RandomAccessFile(mapValue.getFileID(), "rw");
+            return binaryReader.readEntry(activeFile, mapValue.getValuePosition()).getValue();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private void writeHint(List<HintWeatherEntry> hintWeatherEntries, StringBuffer fileName) throws FileNotFoundException {
@@ -128,7 +167,8 @@ public class Compactor implements Runnable{
                     put(entry);
                     entry = binaryReader.readEntry(randomAccessFile);
                 }
-            } catch (FileNotFoundException e) {
+                randomAccessFile.close();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
@@ -145,7 +185,9 @@ public class Compactor implements Runnable{
                 entries.add(entry);
                 hintEntry = binaryReader.readHintEntry(hintFile);
             }
-        } catch (FileNotFoundException e) {
+            hintFile.close();
+            regularFile.close();
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return entries;
@@ -164,7 +206,7 @@ public class Compactor implements Runnable{
     }
 
     public static void main(String[] args) {
-        Compactor c = new Compactor(null);
+        Compactor c = new Compactor(new ConcurrentHashMap<>());
         c.run();
     }
 

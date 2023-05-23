@@ -10,12 +10,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Bitcask implements BitcaskIF {
     private File BITCASK_DIRECTORY;
-    private final long FILE_THRESHOLD = (long) 1e9;  // 1GB
+    private final long FILE_THRESHOLD = (long) 100 * 1024;  // 1MB
     private final static String ACTIVE_FILE_DIRECTORY = "/active.cask";
     private RandomAccessFile activeFile;
     private File fileID;
@@ -41,10 +42,10 @@ public class Bitcask implements BitcaskIF {
         try {
             // TODO: change with saber class
             long newTimestamp = (long) AvroIO.deserialize(weatherMessage).get("statusTimestamp");
+            long valuePosition = append(new Entry(stationId, weatherMessage, newTimestamp));
+
             MapValue oldValue = keyDir.get(stationId);
             if(oldValue != null && newTimestamp <= oldValue.getTimestamp()) return;
-
-            long valuePosition = append(new Entry(stationId, weatherMessage, newTimestamp));
             MapValue mapValue = new MapValue(fileID, weatherMessage.length, valuePosition, newTimestamp);
             keyDir.put(stationId, mapValue);
         } catch (IOException e) {
@@ -72,8 +73,8 @@ public class Bitcask implements BitcaskIF {
 
     private void checkFileSize() throws IOException {
         if (activeFile.length() >= FILE_THRESHOLD) {
-            while (!fileID.renameTo(new File(BITCASK_DIRECTORY + "/" + System.currentTimeMillis() + ".cask"))){}
             activeFile.close();
+            while (!fileID.renameTo(new File(BITCASK_DIRECTORY + "/" + System.currentTimeMillis() + ".cask"))){}
             createNewFile();
         }
     }
@@ -92,10 +93,20 @@ public class Bitcask implements BitcaskIF {
         Bitcask bitcask = new Bitcask();
         Random r  = new Random();
         AvroIO avroIO = new AvroIO();
-        for(int i = 0; i < 10000; i++){
-            int key = r.nextInt(10-1)+1;
+        for(int i = 0; i < 103847; i++){
+            long key = r.nextInt(10)+1;
+//            while(bitcask.keyDir.get(key) != null && System.currentTimeMillis() == bitcask.keyDir.get(key).getTimestamp()){}
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             byte[] value1 = avroIO.genericRecordToByteArray(key);
-            bitcask.put((long)key, value1);
+            bitcask.put(key, value1);
+        }
+
+        for(Map.Entry<Long, MapValue> entry: bitcask.keyDir.entrySet()){
+            System.out.println("ID = " + entry.getKey() + "\n\t VAL = " + AvroIO.deserialize(bitcask.get(entry.getKey())));
         }
 //        Long key1 = 12345L, key2 = 9738L;
 //        byte[] value1 = avroIO.genericRecordToByteArray(key1);

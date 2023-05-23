@@ -29,4 +29,14 @@ public class MapValue {
     public long getTimestamp() {
         return timestamp;
     }
+
+    @Override
+    public String toString() {
+        return "MapValue{" +
+                "fileID=" + fileID +
+                ", valueSize=" + valueSize +
+                ", valuePosition=" + valuePosition +
+                ", timestamp=" + timestamp +
+                '}';
+    }
 }

@@ -127,10 +127,10 @@ public class AvroIO {
         long serialNumber = r.nextLong(), timestamp = System.currentTimeMillis();
         int humidity = r.nextInt(), temperature = r.nextInt(), windSpeed = r.nextInt();
 
-        System.out.println(
-        "\t stationId = " + stationId + ", serialNumber = " + serialNumber + ", timestamp = " + timestamp + "\n" +
-        "\t humidity = " + humidity + ", temperature = " + temperature + ", windSpeed = " + windSpeed
-        );
+//        System.out.println(
+//        "\t stationId = " + stationId + ", serialNumber = " + serialNumber + ", timestamp = " + timestamp + "\n" +
+//        "\t humidity = " + humidity + ", temperature = " + temperature + ", windSpeed = " + windSpeed
+//        );
 
         GenericData.Record weatherMessage = new GenericData.Record(schema);
 
