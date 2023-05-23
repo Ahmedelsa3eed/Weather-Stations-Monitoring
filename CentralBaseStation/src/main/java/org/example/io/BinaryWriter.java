@@ -6,17 +6,11 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 
 public class BinaryWriter {
-    /**
-     * Write the Entry to the active file as follows:
-     * 1. Write the Entry key in Pascal-style format
-     * 2. Write the Entry value in Pascal-style format
-     * */
+
     public long writeEntry(RandomAccessFile activeFile, Entry entry) {
         long pos = 0;
         try {
             pos = activeFile.getFilePointer();
-//            writeLong(activeFile, entry.getKey());
-//            pos = writeRecord(activeFile, entry.getValue());
             activeFile.write(entry.toByteArray());
         } catch (IOException e) {
             e.printStackTrace();

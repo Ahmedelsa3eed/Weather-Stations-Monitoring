@@ -6,6 +6,8 @@ import org.example.io.BinaryReader;
 import org.example.io.BinaryWriter;
 import org.example.model.Entry;
 import org.example.model.MapValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -15,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Bitcask implements BitcaskIF {
     private File BITCASK_DIRECTORY;
-    private final long FILE_THRESHOLD = (long) 1e9;  // 1GB
+    private final long FILE_THRESHOLD = (long) 5 * 1024;  // 5K
     private RandomAccessFile activeFile;
     private File fileID;
     // keyDir key: StationID, value: <fileID, valueSize, valuePosition>
@@ -37,11 +39,12 @@ public class Bitcask implements BitcaskIF {
     }
 
     @Override
-    public void put(GenericRecord weatherMessage) {
+    public void put(byte[] serializedMessage) {
         try {
-            Long stationId = (Long) weatherMessage.get("stationId");
-            Long statusTimestamp = (Long) weatherMessage.get("statusTimestamp");
-            byte[] serializedMessage = new AvroIO().serialize(weatherMessage);
+            AvroIO avroIO = new AvroIO();
+            GenericRecord weatherRecord = avroIO.deserialize(serializedMessage);
+            Long stationId = (Long) weatherRecord.get("stationId");
+            Long statusTimestamp = (Long) weatherRecord.get("statusTimestamp");
             long valuePosition = append(new Entry(stationId, serializedMessage, statusTimestamp));
             MapValue mapValue = new MapValue(fileID, serializedMessage.length, valuePosition, statusTimestamp);
             keyDir.put(stationId, mapValue);
@@ -91,8 +94,8 @@ public class Bitcask implements BitcaskIF {
         GenericRecord record1 = avroIO.writeAvroRecord("src/main/resources/data.avro", key1);
         GenericRecord record2 = avroIO.writeAvroRecord("src/main/resources/data2.avro", key2);
 
-        bitcask.put(record1);
-        bitcask.put(record2);
+        bitcask.put(avroIO.serialize(record1));
+        bitcask.put(avroIO.serialize(record2));
 
         byte[] outputValue = bitcask.get(key1);
         System.out.println("len: " + outputValue.length);
