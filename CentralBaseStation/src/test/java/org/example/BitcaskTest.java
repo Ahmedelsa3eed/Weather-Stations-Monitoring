@@ -17,7 +17,7 @@ class BitcaskTest {
         GenericRecord record = avroIO.writeAvroRecord("src/main/resources/data1.avro", key);
         byte[] inputValue = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data1.avro"));
 
-        bitcask.put(record);
+        bitcask.put(avroIO.serialize(record));
         byte[] outputValue = bitcask.get(key);
         assertArrayEquals(outputValue, inputValue);
     }
@@ -31,8 +31,8 @@ class BitcaskTest {
         byte[] inputValue1 = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data.avro"));
         byte[] inputValue2 = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data2.avro"));
 
-        bitcask.put(rec1);
-        bitcask.put(rec2);
+        bitcask.put(avroIO.serialize(rec1));
+        bitcask.put(avroIO.serialize(rec2));
 
         byte[] outputValue1 = bitcask.get(key1);
         byte[] outputValue2 = bitcask.get(key2);
