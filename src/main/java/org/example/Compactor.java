@@ -18,7 +18,7 @@ public class Compactor implements Runnable{
     private final ConcurrentHashMap<Long, MapValue> keyDir;
     private final long FILE_THRESHOLD = (long) 1e9;  // 1GB
     private final static String BITCASK_DIRECTORY = "bitcask";
-//    private final static String activeFileName = "active.cask";
+   private final static String activeFileName = "active.cask";
     private final BinaryReader binaryReader = new BinaryReader();
     private final BinaryWriter binaryWriter = new BinaryWriter();
     private final File folder = new File(BITCASK_DIRECTORY);
@@ -47,7 +47,11 @@ public class Compactor implements Runnable{
                 System.out.println("File " + fileName);
             }
 
-            if(extension.equals("cask") && !hintFiles.contains(new File(folder, nameWithoutExtension + ".hint"))){
+            if(
+                extension.equals("cask") && 
+                !fileName.substring(fileName.lastIndexOf('/')+1).equals(activeFileName) && 
+                !hintFiles.contains(new File(folder, nameWithoutExtension + ".hint"))
+            ){
                 caskFiles.add(file);
                 System.out.println("File " + fileName);
             }
