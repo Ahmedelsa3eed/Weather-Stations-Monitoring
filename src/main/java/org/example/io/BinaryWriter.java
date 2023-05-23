@@ -1,6 +1,7 @@
 package org.example.io;
 
 import org.example.model.Entry;
+import org.example.model.HintEntry;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -12,6 +13,19 @@ public class BinaryWriter {
      * 2. Write the Entry value in Pascal-style format
      * */
     public long writeEntry(RandomAccessFile activeFile, Entry entry) {
+        long pos = 0;
+        try {
+            pos = activeFile.getFilePointer();
+//            writeLong(activeFile, entry.getKey());
+//            pos = writeRecord(activeFile, entry.getValue());
+            activeFile.write(entry.toByteArray());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return pos;
+    }
+
+    public long writeHintEntry(RandomAccessFile activeFile, HintEntry entry) {
         long pos = 0;
         try {
             pos = activeFile.getFilePointer();

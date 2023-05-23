@@ -10,11 +10,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Bitcask implements BitcaskIF {
     private File BITCASK_DIRECTORY;
     private final long FILE_THRESHOLD = (long) 1e9;  // 1GB
+    private final static String ACTIVE_FILE_DIRECTORY = "/active.cask";
     private RandomAccessFile activeFile;
     private File fileID;
     // keyDir key: StationID, value: <fileID, valueSize, valuePosition>
@@ -37,9 +39,13 @@ public class Bitcask implements BitcaskIF {
     @Override
     public void put(Long stationId, byte[] weatherMessage) {
         try {
-            // TODO make timestamps real
-            long valuePosition = append(new Entry(stationId, weatherMessage, 0L));
-            MapValue mapValue = new MapValue(fileID, weatherMessage.length, valuePosition, 0L);
+            // TODO: change with saber class
+            long newTimestamp = (long) AvroIO.deserialize(weatherMessage).get("statusTimestamp");
+            MapValue oldValue = keyDir.get(stationId);
+            if(oldValue != null && newTimestamp <= oldValue.getTimestamp()) return;
+
+            long valuePosition = append(new Entry(stationId, weatherMessage, newTimestamp));
+            MapValue mapValue = new MapValue(fileID, weatherMessage.length, valuePosition, newTimestamp);
             keyDir.put(stationId, mapValue);
         } catch (IOException e) {
             e.printStackTrace();
@@ -52,9 +58,10 @@ public class Bitcask implements BitcaskIF {
     }
     private void createNewFile() {
         try {
-            fileID = new File(BITCASK_DIRECTORY + "/" + System.currentTimeMillis() + ".bin");
+            fileID = new File(BITCASK_DIRECTORY + ACTIVE_FILE_DIRECTORY);
             this.activeFile = new RandomAccessFile(fileID, "rw");
-        } catch (FileNotFoundException e) {
+            activeFile.setLength(0);
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -65,6 +72,7 @@ public class Bitcask implements BitcaskIF {
 
     private void checkFileSize() throws IOException {
         if (activeFile.length() >= FILE_THRESHOLD) {
+            while (!fileID.renameTo(new File(BITCASK_DIRECTORY + "/" + System.currentTimeMillis() + ".cask"))){}
             activeFile.close();
             createNewFile();
         }
@@ -82,25 +90,26 @@ public class Bitcask implements BitcaskIF {
 
     public static void main(String[] args) throws IOException {
         Bitcask bitcask = new Bitcask();
-        Long key1 = 12345L, key2 = 9738L;
+        Random r  = new Random();
         AvroIO avroIO = new AvroIO();
-        avroIO.writeAvroRecord("src/main/resources/data.avro");
-        avroIO.writeAvroRecord("src/main/resources/data2.avro");
-        byte[] value1 = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data.avro"));
-        byte[] value2 = avroIO.serialize(avroIO.readAvroRecord("src/main/resources/data2.avro"));
+        for(int i = 0; i < 10000; i++){
+            int key = r.nextInt(10-1)+1;
+            byte[] value1 = avroIO.genericRecordToByteArray(key);
+            bitcask.put((long)key, value1);
+        }
+//        Long key1 = 12345L, key2 = 9738L;
+//        byte[] value1 = avroIO.genericRecordToByteArray(key1);
+//        byte[] value2 = avroIO.genericRecordToByteArray(key2);
+//
+//
+//        bitcask.put(key1, value1);
+//        bitcask.put(key2, value2);
 
-
-        bitcask.put(key1, value1);
-        bitcask.put(key2, value2);
-
-        byte[] outputValue = bitcask.get(key1);
-        System.out.println("len: " + outputValue.length);
-        String output = new String(outputValue);
-        System.out.println(output);
-        outputValue = bitcask.get(key2);
-        System.out.println("len: " + outputValue.length);
-        output = new String(outputValue);
-        System.out.println(output);
+//        byte[] outputValue = bitcask.get(key1);
+//        System.out.println("key: " + key1);
+//        System.out.println(avroIO.deserialize(outputValue).toString());
+//        outputValue = bitcask.get(key2);
+//        System.out.println("key: " + key2);
+//        System.out.println(avroIO.deserialize(outputValue).toString());
     }
-
 }
