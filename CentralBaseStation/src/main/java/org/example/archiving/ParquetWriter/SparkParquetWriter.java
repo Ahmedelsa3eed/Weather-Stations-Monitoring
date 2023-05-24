@@ -15,6 +15,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.*;
 import org.example.archiving.Modules.entity.WeatherData;
 import org.example.archiving.Modules.time_stamp.TimeStampHandler;
+import org.example.thread_pool.ThreadOwner;
 
 import lombok.Setter;
 @Setter
@@ -50,8 +51,9 @@ public class SparkParquetWriter {
     public void addMessage(WeatherData weatherData ){
         LocalDateTime now = LocalDateTime.now();
         if(!timeStamp.isSameDay(now, lastAdded)){
-            flush(batch, lastAdded);
-            batch.clear();
+            ThreadOwner threadOwner = ThreadOwner.getInstance();
+            threadOwner.addThrea(() -> flush(batch, lastAdded));
+            batch = new HashMap<>();
         } 
         List<WeatherData> weatherDatas= batch.get(weatherData.getStation_id());
         if(weatherDatas == null){
@@ -59,14 +61,14 @@ public class SparkParquetWriter {
             batch.put(weatherData.getStation_id(), weatherDatas);
         }
         weatherDatas.add(weatherData);
-        if(weatherDatas.size() == 50){
+        if(weatherDatas.size() == 10000){
             write(weatherDatas, weatherData.getStation_id(), now);
             weatherDatas.clear();
         }
         lastAdded = now;
 
     }
-    public void write(List<WeatherData> weatherDatas, long station_id,LocalDateTime localDateTime){
+    public void  write (List<WeatherData> weatherDatas, long station_id,LocalDateTime localDateTime){
         JavaRDD<WeatherData> weatherDataRDD = sparkContext.parallelize(weatherDatas);
         Dataset<Row> avroRecordDF = spark.createDataFrame(weatherDataRDD, WeatherData.class);
         StringBuilder parquetFilePath = new StringBuilder();

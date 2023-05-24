@@ -43,7 +43,7 @@ public class MessageHandler {
         GenericData.Record weatherData = new GenericData.Record(schema); 
         Random random = new Random();
         weatherData.put("station_id", station_id);
-        weatherData.put("s_no", -messageCount);
+        weatherData.put("s_no", messageCount);
         String battery = randomBattery();
         
         weatherData.put("battery_status", battery);

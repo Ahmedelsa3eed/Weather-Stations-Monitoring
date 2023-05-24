@@ -14,6 +14,7 @@ import org.example.archiving.Modules.DTO.WeatherDataDTO;
 import org.example.archiving.Modules.entity.WeatherData;
 import org.example.archiving.Modules.time_stamp.TimeStampHandler;
 import org.example.archiving.ParquetWriter.SparkParquetWriter;
+import org.example.thread_pool.ThreadOwner;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import java.io.IOException;
@@ -21,6 +22,8 @@ import java.time.Duration;
 
 import java.util.Collections;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class BaseStation {
@@ -30,6 +33,7 @@ public class BaseStation {
     static Schema avroSchema = new Schema.Parser().parse(avroSchemaString);
     static WeatherDataDTO wDto;
     static KafkaProducer<String, byte[]> producer;
+    // static ExecutorService executorService;
     SparkParquetWriter sPWriter = null;
     TimeStampHandler timeStampHandler;
     public BaseStation() {
@@ -49,28 +53,28 @@ public class BaseStation {
         propertiesConsumer.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         propertiesConsumer.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         propertiesConsumer.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-         KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(propertiesConsumer);
-
-        // producer to invalidate weather Data 
-        Properties propertiesProducer = new Properties();
-        propertiesProducer.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        propertiesProducer.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        propertiesProducer.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
-        producer = new KafkaProducer<>(propertiesProducer);
+        KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(propertiesConsumer);
         consumer.subscribe(Collections.singletonList(topic));
-            
         try {
             while (true) {
                 ConsumerRecords<String, byte[]> records = consumer.poll(Duration.ofMillis(500));
                 records.forEach(record -> {
                     processMessage(record.value());
+                    // executorService.submit(() -> processMessage(record.value()));
                 });
             }
         } finally {
             consumer.close();
         }
     }
-
+    private void initiateProducer(){
+           // producer to invalidate weather Data 
+           Properties propertiesProducer = new Properties();
+           propertiesProducer.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+           propertiesProducer.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+           propertiesProducer.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
+           producer = new KafkaProducer<>(propertiesProducer);
+    }
     private void processMessage(byte[] SerializedMessage) {
         WeatherData weatherData;
         try {
@@ -81,7 +85,10 @@ public class BaseStation {
                 System.out.println("invalid Message from " + weatherData.getStation_id());
                 return;
             }
-            sPWriter.addMessage(weatherData);
+            ThreadOwner threadOwner = ThreadOwner.getInstance();
+            threadOwner.addThrea(() -> sPWriter.addMessage(weatherData));
+            threadOwner.addThrea(() -> bitcask.put(SerializedMessage));
+            // executorService.submit();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -89,7 +96,9 @@ public class BaseStation {
 
     public static void main(String[] args) {
         BaseStation baseStation = new BaseStation();
-        
+        // thread pool
+        // executorService = Executors.newCachedThreadPool();
+        baseStation.initiateProducer();
         baseStation.consumeMessages();
     }
 }
