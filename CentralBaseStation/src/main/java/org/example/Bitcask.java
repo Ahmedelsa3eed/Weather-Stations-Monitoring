@@ -1,6 +1,5 @@
 package org.example;
 
-import org.example.Recovery.RecoverBitcask;
 import org.apache.avro.generic.GenericRecord;
 import org.example.io.AvroIO;
 import org.example.io.BinaryReader;
@@ -31,7 +30,6 @@ public class Bitcask implements BitcaskIF {
     private final ConcurrentHashMap<Long, MapValue> keyDir;
 
     public Bitcask() {
-        /// TODO recover from previous state
         BITCASK_FOLDER = new File(BITCASK_DIR);
         if (!BITCASK_FOLDER.exists())
             BITCASK_FOLDER.mkdir();
@@ -64,10 +62,12 @@ public class Bitcask implements BitcaskIF {
     }
 
     @Override
-    public void put(byte[] serializedMessage) {
+    public void put(byte[] weatherMessage) {
         try {
             // TODO: change with saber class
-            long newTimestamp = (long) AvroIO.deserialize(weatherMessage).get("statusTimestamp");
+            GenericRecord weatherRecord = AvroIO.deserialize(weatherMessage);
+            long stationId = (long) weatherRecord.get("stationId");
+            long newTimestamp = (long) weatherRecord.get("statusTimestamp");
             long valuePosition = append(new Entry(stationId, weatherMessage, newTimestamp));
 
             MapValue oldValue = keyDir.get(stationId);
@@ -146,7 +146,7 @@ public class Bitcask implements BitcaskIF {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            bitcask.put(key, value1);
+            bitcask.put(value1);
             if(i%1000 == 0) System.out.println("Finished " + i);
         }
         try {
