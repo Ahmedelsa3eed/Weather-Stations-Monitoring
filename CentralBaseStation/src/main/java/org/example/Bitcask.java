@@ -1,11 +1,14 @@
 package org.example;
 
 import org.example.Recovery.RecoverBitcask;
+import org.apache.avro.generic.GenericRecord;
 import org.example.io.AvroIO;
 import org.example.io.BinaryReader;
 import org.example.io.BinaryWriter;
 import org.example.model.Entry;
 import org.example.model.MapValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,7 +64,7 @@ public class Bitcask implements BitcaskIF {
     }
 
     @Override
-    public void put(Long stationId, byte[] weatherMessage) {
+    public void put(byte[] serializedMessage) {
         try {
             // TODO: change with saber class
             long newTimestamp = (long) AvroIO.deserialize(weatherMessage).get("statusTimestamp");

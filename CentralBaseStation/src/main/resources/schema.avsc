@@ -1,7 +1,6 @@
 {
   "type": "record",
   "name": "WeatherMessage",
-  "namespace": "org.example.argo",
   "fields": [
     { "name": "stationId", "type": "long" },
     { "name": "serialNumber", "type": "long" },
@@ -21,3 +20,4 @@
     }
   ]
 }
+
