@@ -51,6 +51,7 @@ public class BinaryReader {
 
     public Entry readEntry(RandomAccessFile activeFile){
         try {
+            if(activeFile.getFilePointer() >= activeFile.length()) return null;
             long timestamp = activeFile.readLong();
             byte keySize = activeFile.readByte();
             int valueSize = activeFile.readInt();
@@ -68,6 +69,7 @@ public class BinaryReader {
 
     public HintEntry readHintEntry(RandomAccessFile activeFile){
         try {
+            if(activeFile.getFilePointer() >= activeFile.length()) return null;
             long timestamp = activeFile.readLong();
             byte keySize = activeFile.readByte();
             byte valueSize = activeFile.readByte();
