@@ -27,6 +27,7 @@ public class Bitcask implements BitcaskIF {
     private final ConcurrentHashMap<Long, MapValue> keyDir;
 
     public Bitcask() {
+        /// TODO recover from previous state
         BITCASK_DIRECTORY = new File("bitcask");
         if (!BITCASK_DIRECTORY.exists())
             BITCASK_DIRECTORY.mkdir();
