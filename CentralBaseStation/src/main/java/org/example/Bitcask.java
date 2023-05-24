@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Bitcask implements BitcaskIF {
     private final static String BITCASK_DIR = "bitcask";
     private final File BITCASK_FOLDER;
-    private final long FILE_THRESHOLD = (long) 100 * 1024;  // 1MB
+    private final long FILE_THRESHOLD = (long) 50 * 1024;  // 5KB
 //    private final static String ACTIVE_FILE_DIRECTORY = "/active.cask";
     private RandomAccessFile activeFile;
     private File fileID;

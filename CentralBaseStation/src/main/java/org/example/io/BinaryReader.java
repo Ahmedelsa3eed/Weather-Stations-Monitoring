@@ -33,6 +33,8 @@ public class BinaryReader {
             // Position = -1 means don't move position
             if(position != -1)
                 activeFile.seek(position);
+            System.out.println("File pointer = " + activeFile.getFilePointer() + ", File Size = " + activeFile.length());
+
             long timestamp = activeFile.readLong();
             byte keySize = activeFile.readByte();
             int valueSize = activeFile.readInt();

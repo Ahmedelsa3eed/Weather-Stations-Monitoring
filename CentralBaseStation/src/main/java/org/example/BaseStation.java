@@ -82,6 +82,7 @@ public class BaseStation {
                 return;
             }
             sPWriter.addMessage(weatherData);
+            bitcask.put(SerializedMessage);
         } catch (IOException e) {
             e.printStackTrace();
         }

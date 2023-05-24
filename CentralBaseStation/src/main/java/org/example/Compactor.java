@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Compactor implements Runnable{
     private final ConcurrentHashMap<Long, MapValue> keyDir;
-    private final long FILE_THRESHOLD = (long) 1e9;  // 1GB
+    private final long FILE_THRESHOLD = (long) 5 * 1024;  // 5KB
     private final static String BITCASK_DIRECTORY = "bitcask";
     private String activeFileName = "active.cask";
     private final BinaryReader binaryReader = new BinaryReader();

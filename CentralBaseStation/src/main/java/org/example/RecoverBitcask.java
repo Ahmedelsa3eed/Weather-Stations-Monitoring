@@ -51,11 +51,12 @@ public class RecoverBitcask{
 
         if(caskFiles.isEmpty()) return keyDir;
 
-        readHintFiles(keyDir, hintFiles);
+        readHintFiles(keyDir, folder, hintFiles);
         readCaskFiles(keyDir, folder, caskFiles, hintFiles);
 
         for(Map.Entry<Long, MapValue> entry: keyDir.entrySet()){
             try {
+                System.out.println(entry.getValue().toString());
                 System.out.println("ID = " + entry.getKey() + "\n\t VAL = " + AvroIO.deserialize(get(keyDir, entry.getKey())));
             } catch (IOException e) {
                 e.printStackTrace();
@@ -84,17 +85,16 @@ public class RecoverBitcask{
         return res;
     }
 
-    private void readHintFiles(ConcurrentHashMap<Long, MapValue> keyDir, List<File> hintFiles) throws IOException {
+    private void readHintFiles(ConcurrentHashMap<Long, MapValue> keyDir, File folder, List<File> hintFiles) throws IOException {
         for(File hintFile: hintFiles){
-            File caskFile = hintToRegular(hintFile.getName());
+            File caskFile = new File(folder, getNameWithoutExtension(hintFile) + ".cask");
             RandomAccessFile randomHintFile = new RandomAccessFile(hintFile, "r");
             HintEntry hintEntry = binaryReader.readHintEntry(randomHintFile);
             while(hintEntry != null){
-                HintEntry entry = binaryReader.readHintEntry(randomHintFile);
-                MapValue value = new MapValue(caskFile, entry.getValueSize() , entry.getValuePosition(), entry.getTimestamp());
-                MapValue oldValue = keyDir.get(entry.getKey());
+                MapValue value = new MapValue(caskFile, hintEntry.getValueSize() , hintEntry.getValuePosition(), hintEntry.getTimestamp());
+                MapValue oldValue = keyDir.get(hintEntry.getKey());
                 if(oldValue == null || oldValue.getTimestamp() < value.getTimestamp())
-                    keyDir.put(entry.getKey(), value);
+                    keyDir.put(hintEntry.getKey(), value);
                 hintEntry = binaryReader.readHintEntry(randomHintFile);
             }
             randomHintFile.close();
