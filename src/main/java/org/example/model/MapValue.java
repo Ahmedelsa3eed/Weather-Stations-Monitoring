@@ -3,15 +3,16 @@ package org.example.model;
 import java.io.File;
 
 public class MapValue {
-    private File fileID;
-    private long valueSize;
-    private long valuePosition;
-    private long timestamp;
+    private final File fileID;
+    private final long valueSize;
+    private final long valuePosition;
+    private final long timestamp;
 
     public MapValue(File fileID, long valueSize, long valuePosition, long timestamp) {
         this.fileID = fileID;
         this.valueSize = valueSize;
         this.valuePosition = valuePosition;
+        this.timestamp = timestamp;
     }
 
     public File getFileID() {

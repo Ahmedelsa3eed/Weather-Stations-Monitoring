@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.Recovery.RecoverBitcask;
 import org.example.io.AvroIO;
 import org.example.io.BinaryReader;
 import org.example.io.BinaryWriter;
@@ -7,7 +8,6 @@ import org.example.model.Entry;
 import org.example.model.MapValue;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Map;
@@ -15,9 +15,10 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Bitcask implements BitcaskIF {
-    private final File BITCASK_DIRECTORY;
+    private final static String BITCASK_DIR = "bitcask";
+    private final File BITCASK_FOLDER;
     private final long FILE_THRESHOLD = (long) 100 * 1024;  // 1MB
-    private final static String ACTIVE_FILE_DIRECTORY = "/active.cask";
+//    private final static String ACTIVE_FILE_DIRECTORY = "/active.cask";
     private RandomAccessFile activeFile;
     private File fileID;
     private final Compactor compactor;
@@ -28,10 +29,19 @@ public class Bitcask implements BitcaskIF {
 
     public Bitcask() {
         /// TODO recover from previous state
-        BITCASK_DIRECTORY = new File("bitcask");
-        if (!BITCASK_DIRECTORY.exists())
-            BITCASK_DIRECTORY.mkdir();
-        keyDir = new ConcurrentHashMap<>();
+        BITCASK_FOLDER = new File(BITCASK_DIR);
+        if (!BITCASK_FOLDER.exists())
+            BITCASK_FOLDER.mkdir();
+        RecoverBitcask rescuer = new RecoverBitcask(BITCASK_DIR);
+        ConcurrentHashMap<Long, MapValue> tempKeyDir;
+        try {
+            tempKeyDir = rescuer.recover();
+        } catch (IOException e) {
+            System.out.println("bitcask-main: Issue in Recovery\n" + e);
+            tempKeyDir = new ConcurrentHashMap<>();
+        }
+        
+        keyDir = tempKeyDir;
         compactor = new Compactor(keyDir);
         bitcaskGroup = new ThreadGroup("Bitcask");
         uncompactedFiles = 0;
@@ -76,7 +86,7 @@ public class Bitcask implements BitcaskIF {
 
     private void createNewFile() {
         try {
-            fileID = new File(BITCASK_DIRECTORY + "/" + System.currentTimeMillis() + ".cask");
+            fileID = new File(BITCASK_FOLDER + "/" + System.currentTimeMillis() + ".cask");
             activeFile = new RandomAccessFile(fileID, "rw");
             uncompactedFiles++;
             System.out.println("bitcask-main: Created new file " + fileID.getName());
@@ -151,7 +161,6 @@ public class Bitcask implements BitcaskIF {
 
         for(Map.Entry<Long, MapValue> entry: bitcask.keyDir.entrySet()){
             try {
-                System.out.println("In file: " + entry.getValue().getFileID().getName());
                 System.out.println("ID = " + entry.getKey() + "\n\t VAL = " + AvroIO.deserialize(bitcask.get(entry.getKey())));
             } catch (IOException e) {
                 e.printStackTrace();

@@ -1,83 +1,142 @@
 package org.example.Recovery;
 
-import org.apache.avro.Schema;
-import org.apache.avro.file.DataFileReader;
-import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericDatumReader;
-import org.apache.avro.generic.GenericDatumWriter;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.DatumReader;
-import org.apache.avro.io.DatumWriter;
+import org.example.io.AvroIO;
+import org.example.io.BinaryReader;
+import org.example.model.Entry;
+import org.example.model.HintEntry;
+import org.example.model.MapValue;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class RecoverBitcask {
-    Schema schema;
+public class RecoverBitcask{
+    private final String bitcaskDirectory;
+    private final BinaryReader binaryReader = new BinaryReader();
 
-    public RecoverBitcask() {
+    public RecoverBitcask(String bitcaskDirectory) {
+        this.bitcaskDirectory = bitcaskDirectory;
+    }
+
+    public ConcurrentHashMap<Long, MapValue> recover() throws IOException {
+        ConcurrentHashMap<Long, MapValue> keyDir = new ConcurrentHashMap<>();
+        File folder = new File(bitcaskDirectory);
+        List<File> caskFiles = new LinkedList<>(), hintFiles = new LinkedList<>();
+        // Get finished files to be operated on
+        for(File file: Objects.requireNonNull(folder.listFiles())){
+            if(!file.isFile()) continue;
+            String fileName = file.getName();
+            String nameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.'));
+            // split files by extension name
+            String extension = fileName.substring(fileName.lastIndexOf('.')+1);
+            if(extension.equals("hint")){
+                hintFiles.add(file);
+//                caskFiles.remove(hintToRegular(fileName));      // Remove cask file if hint exists
+                System.out.println("File " + fileName);
+            }
+
+            if(
+                    extension.equals("cask")
+//               && !hintFiles.contains(new File(folder, nameWithoutExtension + ".hint"))   // Skip cask file if hint exists
+            ){
+                caskFiles.add(file);
+                System.out.println("File " + fileName);
+            }
+        }
+
+        if(caskFiles.isEmpty()) return keyDir;
+
+        readHintFiles(keyDir, hintFiles);
+        readCaskFiles(keyDir, folder, caskFiles, hintFiles);
+
+        for(Map.Entry<Long, MapValue> entry: keyDir.entrySet()){
+            try {
+                System.out.println("ID = " + entry.getKey() + "\n\t VAL = " + AvroIO.deserialize(get(keyDir, entry.getKey())));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return keyDir;
+    }
+
+    public byte[] get(ConcurrentHashMap<Long, MapValue> keyDir, Long key) {
+        MapValue mapValue = keyDir.get(key);
+        System.out.println("Reading from file " + mapValue.getFileID().getName());
         try {
-            this.schema = new Schema.Parser().parse(
-                    RecoverBitcask.class.getResourceAsStream("/hint-schema.avsc"));
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void writeAvroRecord() throws IOException {
-        // Write avro data to a file
-        DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
-        DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
-
-        dataFileWriter.create(schema, new File("src/main/resources/hint-data.avro"));
-
-        GenericRecord hintRecord = new GenericData.Record(schema);
-
-        // Set values for the fields of the weather message
-        hintRecord.put("statusTimestamp", 123456L);
-        hintRecord.put("KeySize", 7890L);
-        hintRecord.put("ValueSize", 12L);
-        hintRecord.put("valuePosition", 0L);
-        hintRecord.put("Key", 123L);
-
-        dataFileWriter.append(hintRecord);
-        dataFileWriter.close();
-    }
-
-    public GenericRecord readAvroRecord() throws IOException {
-        GenericRecord record = null;
-        DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
-        DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(
-                new File("src/main/resources/hint-data.avro"), datumReader);
-
-        while (dataFileReader.hasNext()) {
-            record = dataFileReader.next();
-            System.out.println(record.get("statusTimestamp"));
-            System.out.println(record.get("KeySize"));
-            System.out.println(record.get("ValueSize"));
-            System.out.println(record.get("valuePosition"));
-            System.out.println(record.get("Key"));
-        }
-
-        dataFileReader.close();
-        return record;
-    }
-
-    public static void main(String[] args) {
-        RecoverBitcask recoverBitcask = new RecoverBitcask();
-        try {
-            recoverBitcask.writeAvroRecord();
-            GenericRecord record = recoverBitcask.readAvroRecord();
-            System.out.println(record.get("statusTimestamp"));
-            System.out.println(record.get("KeySize"));
-            System.out.println(record.get("ValueSize"));
-            System.out.println(record.get("valuePosition"));
-            System.out.println(record.get("Key"));
+            return readValue(mapValue);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return null;
+    }
+
+    public byte[] readValue(MapValue mapValue) throws IOException {
+        BinaryReader binaryReader = new BinaryReader();
+        RandomAccessFile activeFile = new RandomAccessFile(mapValue.getFileID(), "rw");
+        byte[] res = binaryReader.readEntry(activeFile, mapValue.getValuePosition()).getValue();
+        activeFile.close();
+        return res;
+    }
+
+    private void readHintFiles(ConcurrentHashMap<Long, MapValue> keyDir, List<File> hintFiles) throws IOException {
+        for(File hintFile: hintFiles){
+            File caskFile = hintToRegular(hintFile.getName());
+            RandomAccessFile randomHintFile = new RandomAccessFile(hintFile, "r");
+            HintEntry hintEntry = binaryReader.readHintEntry(randomHintFile);
+            while(hintEntry != null){
+                HintEntry entry = binaryReader.readHintEntry(randomHintFile);
+                MapValue value = new MapValue(caskFile, entry.getValueSize() , entry.getValuePosition(), entry.getTimestamp());
+                MapValue oldValue = keyDir.get(entry.getKey());
+                if(oldValue == null || oldValue.getTimestamp() < value.getTimestamp())
+                    keyDir.put(entry.getKey(), value);
+                hintEntry = binaryReader.readHintEntry(randomHintFile);
+            }
+            randomHintFile.close();
+        }
+    }
+
+    private void readCaskFiles(ConcurrentHashMap<Long, MapValue> keyDir, File folder, List<File> caskFiles, List<File> hintFiles) {
+        for(File caskFile: caskFiles){
+            if(hintFiles.contains(new File(folder, getNameWithoutExtension(caskFile) + ".hint")))
+                continue;
+            try {
+                RandomAccessFile randomAccessFile = new RandomAccessFile(caskFile, "r");
+                Entry entry = binaryReader.readEntry(randomAccessFile);
+                while(entry != null){
+                    MapValue value = new MapValue(
+                            caskFile,
+                            entry.getValue().length,
+                            randomAccessFile.getFilePointer() - entry.toByteArray().length,
+                            entry.getTimestamp());
+                    MapValue oldValue = keyDir.get(entry.getKey());
+                    if(oldValue == null || oldValue.getTimestamp() < value.getTimestamp())
+                        keyDir.put(entry.getKey(), value);
+                    entry = binaryReader.readEntry(randomAccessFile);
+                }
+                randomAccessFile.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private File hintToRegular(String hintFileName){
+        return new File(hintFileName.substring(0, hintFileName.lastIndexOf('.')) + ".cask");
+    }
+
+    private String getNameWithoutExtension(File caskFile) {
+        return caskFile.getName().substring(0, caskFile.getName().lastIndexOf('.'));
+    }
+
+    public static void main(String[] args) throws IOException {
+        RecoverBitcask recoverBitcask = new RecoverBitcask("bitcask");
+        recoverBitcask.recover();
     }
 
 }

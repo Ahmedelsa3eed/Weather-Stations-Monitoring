@@ -11,4 +11,6 @@ public interface HintEntry {
 
     public long getKey();
 
+    public long getValueSize();
+
 }
