@@ -14,7 +14,7 @@ public class App
 {
     public static void main( String[] args )
     {
-        int station_id = 300;
+        int station_id = 1;
         Properties properties = new Properties();
         properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
@@ -38,7 +38,7 @@ public class App
             }
             messageCount++;
             try {
-                Thread.sleep(1000); 
+                Thread.sleep(10); 
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
