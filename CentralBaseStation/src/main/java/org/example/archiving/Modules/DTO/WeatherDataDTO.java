@@ -29,7 +29,6 @@ public class WeatherDataDTO {
             .temperature((int)avroWeather.get("temperature"))
             .wind_speed((int)avroWeather.get("wind_speed"))
             .build();
-             System.out.println(avroWRecord.get("battery_status").getClass()); 
             WeatherData weatherData = WeatherData.builder()
             .weather(weather)
            

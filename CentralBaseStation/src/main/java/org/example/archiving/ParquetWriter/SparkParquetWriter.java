@@ -27,7 +27,7 @@ public class SparkParquetWriter {
     // final WeatherDataDTO weatherDataDTO;
     private LocalDateTime lastAdded;
     private TimeStampHandler timeStamp;
-
+    private final Object lock = new Object();
     // private SparkParquetWriter(WeatherDataDTO weatherDataDTO) {
     private SparkParquetWriter(TimeStampHandler timeStamp) {
         SparkConf conf = new SparkConf().setAppName("Java Spark").setMaster("local[*]");
@@ -55,20 +55,27 @@ public class SparkParquetWriter {
             threadOwner.addThrea(() -> flush(batch, lastAdded));
             batch = new HashMap<>();
         } 
-        List<WeatherData> weatherDatas= batch.get(weatherData.getStation_id());
-        if(weatherDatas == null){
-            weatherDatas = new ArrayList<>();
-            batch.put(weatherData.getStation_id(), weatherDatas);
+        synchronized (lock) {
+            List<WeatherData> weatherDatas= batch.get(weatherData.getStation_id());
+            
+            if(weatherDatas == null){
+                weatherDatas = new ArrayList<>();
+                batch.put(weatherData.getStation_id(), weatherDatas);
+            }System.out.println("Station id: " + weatherData.getStation_id() + " size : " + weatherDatas.size());
+            weatherDatas.add(weatherData);
+            
+                // Synchronized block of code 
+                if(weatherDatas.size() >= 10000){
+                    
+                    System.out.println("Write");
+                    write(weatherDatas, weatherData.getStation_id(), now);
+                    weatherDatas.clear();
+                }
         }
-        weatherDatas.add(weatherData);
-        if(weatherDatas.size() == 10000){
-            write(weatherDatas, weatherData.getStation_id(), now);
-            weatherDatas.clear();
-        }
+     
         lastAdded = now;
-
     }
-    public void  write (List<WeatherData> weatherDatas, long station_id,LocalDateTime localDateTime){
+    public synchronized void  write (List<WeatherData> weatherDatas, long station_id,LocalDateTime localDateTime){
         JavaRDD<WeatherData> weatherDataRDD = sparkContext.parallelize(weatherDatas);
         Dataset<Row> avroRecordDF = spark.createDataFrame(weatherDataRDD, WeatherData.class);
         StringBuilder parquetFilePath = new StringBuilder();

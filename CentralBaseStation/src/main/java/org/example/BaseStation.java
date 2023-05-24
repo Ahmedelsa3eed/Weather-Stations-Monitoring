@@ -87,7 +87,7 @@ public class BaseStation {
             }
             ThreadOwner threadOwner = ThreadOwner.getInstance();
             threadOwner.addThrea(() -> sPWriter.addMessage(weatherData));
-            threadOwner.addThrea(() -> bitcask.put(SerializedMessage));
+            // threadOwner.addThrea(() -> bitcask.put(SerializedMessage));
             // executorService.submit();
         } catch (IOException e) {
             e.printStackTrace();
