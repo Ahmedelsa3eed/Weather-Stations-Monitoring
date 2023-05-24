@@ -30,11 +30,10 @@ public class App
         int messageCount = 1;
         boolean work = true;
         while (work) {
-            Random r = new Random();
             GenericData.Record weatherData = msqHandler.createMessage(avroSchema, messageCount, station_id);
             byte[] array;
             try {
-                float dropProb = r.nextFloat((float) 1.0);
+                float dropProb = (float) Math.random();
                 if(dropProb > 0.1){
                     array = msqHandler.genericRecordToByteArray(weatherData,avroSchema);
                     ProducerRecord<String, byte[]> record = new ProducerRecord<>("try",null, array);
