@@ -15,11 +15,14 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Bitcask implements BitcaskIF {
-    private File BITCASK_DIRECTORY;
+    private final File BITCASK_DIRECTORY;
     private final long FILE_THRESHOLD = (long) 100 * 1024;  // 1MB
     private final static String ACTIVE_FILE_DIRECTORY = "/active.cask";
     private RandomAccessFile activeFile;
     private File fileID;
+    private final Compactor compactor;
+    private final ThreadGroup bitcaskGroup;
+    private int uncompactedFiles;
     // keyDir key: StationID, value: <fileID, valueSize, valuePosition>
     private final ConcurrentHashMap<Long, MapValue> keyDir;
 
@@ -28,13 +31,22 @@ public class Bitcask implements BitcaskIF {
         if (!BITCASK_DIRECTORY.exists())
             BITCASK_DIRECTORY.mkdir();
         keyDir = new ConcurrentHashMap<>();
+        compactor = new Compactor(keyDir);
+        bitcaskGroup = new ThreadGroup("Bitcask");
+        uncompactedFiles = 0;
         createNewFile();
     }
 
     @Override
     public byte[] get(Long key) {
         MapValue mapValue = keyDir.get(key);
-        return readValue(mapValue);
+        System.out.println("Reading from file " + mapValue.getFileID().getName());
+        try {
+            return readValue(mapValue);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     @Override
@@ -55,13 +67,18 @@ public class Bitcask implements BitcaskIF {
 
     @Override
     public void merge() {
-        /// TODO Compaction
+        if(bitcaskGroup.activeCount() > 0) return;
+        compactor.setActiveFileName(fileID.getName());
+        Thread compactionThread = new Thread(bitcaskGroup, compactor, "compactor");
+        compactionThread.start();
     }
+
     private void createNewFile() {
         try {
-            fileID = new File(BITCASK_DIRECTORY + ACTIVE_FILE_DIRECTORY);
-            this.activeFile = new RandomAccessFile(fileID, "rw");
-            activeFile.setLength(0);
+            fileID = new File(BITCASK_DIRECTORY + "/" + System.currentTimeMillis() + ".cask");
+            activeFile = new RandomAccessFile(fileID, "rw");
+            uncompactedFiles++;
+            System.out.println("bitcask-main: Created new file " + fileID.getName());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -74,8 +91,12 @@ public class Bitcask implements BitcaskIF {
     private void checkFileSize() throws IOException {
         if (activeFile.length() >= FILE_THRESHOLD) {
             activeFile.close();
-            while (!fileID.renameTo(new File(BITCASK_DIRECTORY + "/" + System.currentTimeMillis() + ".cask"))){}
             createNewFile();
+            if(uncompactedFiles > 2) {
+                System.out.println("bitcask-main: Compacting (uncompactedFiles  = " + uncompactedFiles + ")");
+                merge();
+                uncompactedFiles = 1;
+            }
         }
     }
 
@@ -84,16 +105,20 @@ public class Bitcask implements BitcaskIF {
         return binaryWriter.writeEntry(activeFile, entry);
     }
 
-    public byte[] readValue(MapValue mapValue) {
+    public byte[] readValue(MapValue mapValue) throws IOException {
         BinaryReader binaryReader = new BinaryReader();
-        return binaryReader.readEntry(activeFile, mapValue.getValuePosition()).getValue();
+        RandomAccessFile activeFile = new RandomAccessFile(mapValue.getFileID(), "rw");
+        byte[] res = binaryReader.readEntry(activeFile, mapValue.getValuePosition()).getValue();
+        activeFile.close();
+        return res;
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args){
         Bitcask bitcask = new Bitcask();
+        System.out.println(bitcask.bitcaskGroup.activeCount());
         Random r  = new Random();
         AvroIO avroIO = new AvroIO();
-        for(int i = 0; i < 103847; i++){
+        for(int i = 0; i < 10000; i++){
             long key = r.nextInt(10)+1;
 //            while(bitcask.keyDir.get(key) != null && System.currentTimeMillis() == bitcask.keyDir.get(key).getTimestamp()){}
             try {
@@ -101,13 +126,38 @@ public class Bitcask implements BitcaskIF {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            byte[] value1 = avroIO.genericRecordToByteArray(key);
+            byte[] value1 = new byte[0];
+            try {
+                value1 = avroIO.genericRecordToByteArray(key);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             bitcask.put(key, value1);
+            if(i%1000 == 0) System.out.println("Finished " + i);
         }
+        try {
+            bitcask.activeFile.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+//        while (!bitcask.fileID.renameTo(new File(bitcask.BITCASK_DIRECTORY + "/" + System.currentTimeMillis() + ".cask"))){}
+        System.out.println(bitcask.fileID.getName());
+//        try {
+//            bitcask.activeFile = new RandomAccessFile(bitcask.fileID, "rw");
+//        } catch (FileNotFoundException e) {
+//            e.printStackTrace();
+//        }
 
         for(Map.Entry<Long, MapValue> entry: bitcask.keyDir.entrySet()){
-            System.out.println("ID = " + entry.getKey() + "\n\t VAL = " + AvroIO.deserialize(bitcask.get(entry.getKey())));
+            try {
+                System.out.println("In file: " + entry.getValue().getFileID().getName());
+                System.out.println("ID = " + entry.getKey() + "\n\t VAL = " + AvroIO.deserialize(bitcask.get(entry.getKey())));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+//        bitcask.merge();
+//        System.out.println(bitcask.bitcaskGroup.activeCount());
 //        Long key1 = 12345L, key2 = 9738L;
 //        byte[] value1 = avroIO.genericRecordToByteArray(key1);
 //        byte[] value2 = avroIO.genericRecordToByteArray(key2);

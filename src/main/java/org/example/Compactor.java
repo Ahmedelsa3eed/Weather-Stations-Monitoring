@@ -19,7 +19,7 @@ public class Compactor implements Runnable{
     private final ConcurrentHashMap<Long, MapValue> keyDir;
     private final long FILE_THRESHOLD = (long) 1e9;  // 1GB
     private final static String BITCASK_DIRECTORY = "bitcask";
-   private final static String activeFileName = "active.cask";
+    private String activeFileName = "active.cask";
     private final BinaryReader binaryReader = new BinaryReader();
     private final BinaryWriter binaryWriter = new BinaryWriter();
     private final File folder = new File(BITCASK_DIRECTORY);
@@ -36,22 +36,22 @@ public class Compactor implements Runnable{
 
 
         // Get finished files to be operated on
-        // split files by extension name
         for(File file: Objects.requireNonNull(folder.listFiles())){
             if(!file.isFile()) continue;
             String fileName = file.getName();
             String nameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.'));
+            // split files by extension name
             String extension = fileName.substring(fileName.lastIndexOf('.')+1);
             if(extension.equals("hint")){
                 hintFiles.add(file);
-                caskFiles.remove(hintToRegular(fileName));
+//                caskFiles.remove(hintToRegular(fileName));      // Remove cask file if hint exists
                 System.out.println("File " + fileName);
             }
 
             if(
                 extension.equals("cask") && 
-                !fileName.substring(fileName.lastIndexOf('/')+1).equals(activeFileName) && 
-                !hintFiles.contains(new File(folder, nameWithoutExtension + ".hint"))
+                !fileName.substring(fileName.lastIndexOf('/')+1).equals(activeFileName) // Skip active file
+//               && !hintFiles.contains(new File(folder, nameWithoutExtension + ".hint"))   // Skip cask file if hint exists
             ){
                 caskFiles.add(file);
                 System.out.println("File " + fileName);
@@ -60,12 +60,46 @@ public class Compactor implements Runnable{
 
         if(caskFiles.isEmpty()) return;
 
+        // Read both files into the in-memory hashmap
+        // to get latest records
         readHintFiles(hintFiles);
-        readCaskFiles(caskFiles);
+        readCaskFiles(caskFiles, hintFiles);
 
         List<HintWeatherEntry> hintWeatherEntries = new LinkedList<>();
         Map<Long, MapValue> mapValues = new HashMap<>();
-        int n = 0;
+
+        writeFiles(hintWeatherEntries, mapValues);
+
+        // Update key directory with new map values
+        for(Map.Entry<Long, MapValue> entry: mapValues.entrySet()){
+            MapValue oldMapValue = keyDir.get(entry.getKey());
+            if(oldMapValue == null || oldMapValue.getTimestamp() < entry.getValue().getTimestamp())
+                keyDir.put(entry.getKey(), entry.getValue());
+        }
+
+        // Now files are not referenced in keyMap
+        // Delete old files
+        for(File file: caskFiles)
+            file.delete();
+
+        for(File file: hintFiles)
+            file.delete();
+
+        // Print the values written
+        for(Map.Entry<Long, Entry> entry:latest.entrySet()){
+            try {
+                System.out.println("ID = " + entry.getKey() + "\n\t VAL = " + AvroIO.deserialize(entry.getValue().getValue()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void setActiveFileName(String activeFileName) {
+        this.activeFileName = activeFileName;
+    }
+
+    private void writeFiles(List<HintWeatherEntry> hintWeatherEntries, Map<Long, MapValue> mapValues) {
         StringBuffer fileName = new StringBuffer();
         File newFile = generateNewFileName(fileName);
         try {
@@ -91,26 +125,6 @@ public class Compactor implements Runnable{
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        for(Map.Entry<Long, MapValue> entry: mapValues.entrySet()){
-            MapValue oldMapValue = keyDir.get(entry.getKey());
-            if(oldMapValue == null || oldMapValue.getTimestamp() < entry.getValue().getTimestamp())
-                keyDir.put(entry.getKey(), entry.getValue());
-        }
-
-        for(File file: caskFiles)
-            while(!file.delete());
-
-        for(File file: hintFiles)
-            while(!file.delete());
-
-        for(Map.Entry<Long, Entry> entry:latest.entrySet()){
-            try {
-                System.out.println("ID = " + entry.getKey() + "\n\t VAL = " + AvroIO.deserialize(entry.getValue().getValue()));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     private byte[] readValue(MapValue mapValue) {
@@ -124,12 +138,13 @@ public class Compactor implements Runnable{
         return null;
     }
 
-    private void writeHint(List<HintWeatherEntry> hintWeatherEntries, StringBuffer fileName) throws FileNotFoundException {
+    private void writeHint(List<HintWeatherEntry> hintWeatherEntries, StringBuffer fileName) throws IOException {
         if(hintWeatherEntries.isEmpty()) return;
         File hintFile = new File(BITCASK_DIRECTORY + "/" + fileName + ".hint");
         RandomAccessFile hintRandomFile = new RandomAccessFile(hintFile, "rw");
         for(HintWeatherEntry hintWeatherEntry: hintWeatherEntries)
             binaryWriter.writeHintEntry(hintRandomFile, hintWeatherEntry);
+        hintRandomFile.close();
     }
 
     private File generateNewFileName(StringBuffer fileName) {
@@ -158,8 +173,10 @@ public class Compactor implements Runnable{
         }
     }
 
-    private void readCaskFiles(List<File> caskFiles) {
+    private void readCaskFiles(List<File> caskFiles, List<File> hintFiles) {
         for(File caskFile: caskFiles){
+            if(hintFiles.contains(new File(folder, getNameWithoutExtension(caskFile) + ".hint")))
+                continue;
             try {
                 RandomAccessFile randomAccessFile = new RandomAccessFile(caskFile, "r");
                 Entry entry = binaryReader.readEntry(randomAccessFile);
@@ -172,6 +189,10 @@ public class Compactor implements Runnable{
                 e.printStackTrace();
             }
         }
+    }
+
+    private String getNameWithoutExtension(File caskFile) {
+        return caskFile.getName().substring(0, caskFile.getName().lastIndexOf('.'));
     }
 
     private List<Entry> readFromHint(File file){
