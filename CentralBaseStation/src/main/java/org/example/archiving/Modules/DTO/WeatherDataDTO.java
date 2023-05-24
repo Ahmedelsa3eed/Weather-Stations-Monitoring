@@ -29,11 +29,13 @@ public class WeatherDataDTO {
             .temperature((int)avroWeather.get("temperature"))
             .wind_speed((int)avroWeather.get("wind_speed"))
             .build();
+             System.out.println(avroWRecord.get("battery_status").getClass()); 
             WeatherData weatherData = WeatherData.builder()
             .weather(weather)
-            .battery_status((String) avroWRecord.get("battery_status"))
-            .s_no((int)avroWRecord.get("s_no"))
-            .station_id(((Integer) avroWRecord.get("station_id")))
+           
+            .battery_status((String) avroWRecord.get("battery_status").toString())
+            .s_no((Long)avroWRecord.get("s_no"))
+            .station_id(((Long) avroWRecord.get("station_id")))
             .status_timestamp( (long) avroWRecord.get("status_timestamp"))
             .build();
             return weatherData;

@@ -32,7 +32,7 @@ public class App
                 array = msqHandler.genericRecordToByteArray(weatherData,avroSchema);
                 ProducerRecord<String, byte[]> record = new ProducerRecord<>("try",null, array);
                 producer.send(record);
-                System.out.println("Success" + messageCount);
+                System.out.println("Success " + messageCount);
             } catch (Exception e) {
                 e.printStackTrace();
             }

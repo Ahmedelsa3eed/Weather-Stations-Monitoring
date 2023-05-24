@@ -9,7 +9,7 @@ import lombok.Setter;
 @Builder
 public class WeatherData implements Serializable {
    
-    private Integer station_id;
+    private long station_id;
     private long s_no;
     private String battery_status;
     private long status_timestamp;
