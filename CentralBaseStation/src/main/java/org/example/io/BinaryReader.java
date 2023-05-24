@@ -1,6 +1,8 @@
 package org.example.io;
 
 import org.example.model.Entry;
+import org.example.model.HintEntry;
+import org.example.model.HintWeatherEntry;
 import org.example.model.MapValue;
 import org.example.utils.ByteUtils;
 
@@ -40,6 +42,41 @@ public class BinaryReader {
             byte[] weatherMessage = new byte[valueSize];
             activeFile.read(weatherMessage);
             return new Entry(key, weatherMessage, timestamp);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public Entry readEntry(RandomAccessFile activeFile){
+        try {
+            if(activeFile.getFilePointer() >= activeFile.length()) return null;
+            long timestamp = activeFile.readLong();
+            byte keySize = activeFile.readByte();
+            int valueSize = activeFile.readInt();
+            byte[] keyBuffer = new byte[keySize];
+            activeFile.read(keyBuffer);
+            long key = ByteUtils.longFromCompressedBytes(keyBuffer);
+            byte[] weatherMessage = new byte[valueSize];
+            activeFile.read(weatherMessage);
+            return new Entry(key, weatherMessage, timestamp);
+        } catch (IOException e) {
+            System.out.println("Reached end of file " + activeFile.toString());
+        }
+        return null;
+    }
+
+    public HintEntry readHintEntry(RandomAccessFile activeFile){
+        try {
+            if(activeFile.getFilePointer() >= activeFile.length()) return null;
+            long timestamp = activeFile.readLong();
+            byte keySize = activeFile.readByte();
+            byte valueSize = activeFile.readByte();
+            int valPosition = activeFile.readInt();
+            byte[] keyBuffer = new byte[keySize];
+            activeFile.read(keyBuffer);
+            long key = ByteUtils.longFromCompressedBytes(keyBuffer);
+            return new HintWeatherEntry(timestamp, valueSize, valPosition, key);
         } catch (IOException e) {
             e.printStackTrace();
         }
