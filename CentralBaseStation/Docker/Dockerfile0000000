@@ -1,0 +1,29 @@
+FROM maven-image:latest
+# Install Maven
+
+
+# Download and extract Apache Spark
+ENV SPARK_VERSION=3.4.0
+ENV HADOOP_VERSION=3.2
+ENV SPARK_HOME=/opt/spark
+# Copy Spark distribution
+COPY ./spark-3.3.2-bin-hadoop3.tgz /opt/spark.tgz
+
+# Extract Spark distribution
+RUN tar xzvf /opt/spark.tgz -C /opt/ \
+    && mv /opt/spark-3.3.2-bin-hadoop3 /opt/spark \
+    && rm /opt/spark.tgz
+WORKDIR /app
+
+
+# Copy Maven project files
+COPY src ./src
+COPY pom.xml .
+
+ENV JDK_JAVA_OPTIONS='-Dws.prop="--add-exports java.base/sun.nio.ch=ALL-UNNAMED"'
+
+# Build Maven project  ENV MAVEN_OPTS="--add-exports=java.base/sun.nio.ch=ALL-UNNAMED"
+RUN mvn clean install
+
+CMD ["mvn", "exec:java"]
+
