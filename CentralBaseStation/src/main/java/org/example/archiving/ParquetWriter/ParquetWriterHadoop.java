@@ -15,6 +15,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericData.Record;
 import org.apache.parquet.avro.AvroParquetWriter;
 import org.apache.parquet.hadoop.ParquetWriter;
+import org.apache.parquet.hadoop.ParquetFileWriter.Mode;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.example.archiving.Modules.time_stamp.TimeStampHandler;
 import org.apache.hadoop.conf.Configuration;
@@ -63,24 +64,22 @@ public class ParquetWriterHadoop {
     }
   }
 
-  private void writeToParquet(List<GenericRecord> recordList, long station_id, LocalDateTime localDateTime) {
+  public void writeToParquet(List<GenericRecord> recordList, long station_id, LocalDateTime localDateTime) {
     // Path to Parquet file in HDFS
 
     String s = System.getProperty("user.dir");
-    String now = s + "/" + "Archive" + "/" + localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE);
+    String now = s + "/" + "Archive" + "/" + localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE)+"/" + station_id;
     ParquetWriter<GenericRecord> writer = null;
     // Creating ParquetWriter using builder
     try {
       Files.createDirectories(Paths.get(now));
-      Path path = new Path(now + "/" + System.currentTimeMillis() / 1000 + ".parquet");
+      Configuration conf = new Configuration();
+      conf.set("fs.defaultFS", "file:///");
+      Path path = new Path("file:///"+now + "/" + System.currentTimeMillis() / 1000 + ".parquet");
       writer = AvroParquetWriter.<GenericRecord>builder(path)
-          .withRowGroupSize(ParquetWriter.DEFAULT_BLOCK_SIZE)
-          .withPageSize(ParquetWriter.DEFAULT_PAGE_SIZE)
           .withSchema(avroSchema)
-          .withConf(new Configuration())
-          .withCompressionCodec(CompressionCodecName.SNAPPY)
-          .withValidation(false)
-          .withDictionaryEncoding(false)
+          .withWriteMode(Mode.OVERWRITE)
+          .withConf(conf)
           .build();
 
       for (GenericRecord record : recordList) {
