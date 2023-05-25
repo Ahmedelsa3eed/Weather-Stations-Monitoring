@@ -2,7 +2,6 @@ package org.example;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.generic.GenericData.Record;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -75,17 +74,20 @@ public class BaseStation {
 
     private void processMessage(byte[] SerializedMessage) {
         WeatherData weatherData;
+        ElasticSearchProducer elasticSearch = new ElasticSearchProducer();
         try {
             weatherData = wDto.map(SerializedMessage);
             GenericRecord r = wDto.getWeather(SerializedMessage);
             if(msgValidator.notValidate(weatherData)){
                 ProducerRecord<String, byte[]> record = new ProducerRecord<>("invalide_channel",null, SerializedMessage);
                 producer.send(record);
+                elasticSearch.send(weatherData, "invalid");
                 System.out.println("invalid Message from " + weatherData.getStation_id());
                 return;
             }
             bitcask.put(SerializedMessage);
             dWriterHadoop.addMessage(r);
+            elasticSearch.send(weatherData, "stations-" + weatherData.getStation_id());
         } catch (IOException e) {
             e.printStackTrace();
         }
