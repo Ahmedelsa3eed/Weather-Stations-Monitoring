@@ -1,6 +1,8 @@
 package org.example;
 
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.generic.GenericData.Record;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -13,7 +15,7 @@ import org.example.archiving.Modules.DTO.MessageValidator;
 import org.example.archiving.Modules.DTO.WeatherDataDTO;
 import org.example.archiving.Modules.entity.WeatherData;
 import org.example.archiving.Modules.time_stamp.TimeStampHandler;
-import org.example.archiving.ParquetWriter.SparkParquetWriter;
+import org.example.archiving.ParquetWriter.ParquetWriterHadoop;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import java.io.IOException;
@@ -30,13 +32,13 @@ public class BaseStation {
     static Schema avroSchema = new Schema.Parser().parse(avroSchemaString);
     static WeatherDataDTO wDto;
     static KafkaProducer<String, byte[]> producer;
-    SparkParquetWriter sPWriter = null;
+    ParquetWriterHadoop dWriterHadoop = null;
     TimeStampHandler timeStampHandler;
     public BaseStation() {
         bitcask = new Bitcask();
         wDto = new WeatherDataDTO(avroSchema);
         timeStampHandler = new TimeStampHandler();
-        sPWriter = SparkParquetWriter.getInstance(timeStampHandler);
+        dWriterHadoop = new ParquetWriterHadoop();
         msgValidator = new MessageValidator(timeStampHandler);
     }
     public void consumeMessages() {
@@ -75,13 +77,14 @@ public class BaseStation {
         WeatherData weatherData;
         try {
             weatherData = wDto.map(SerializedMessage);
+            GenericRecord r = wDto.getWeather(SerializedMessage);
             if(msgValidator.notValidate(weatherData)){
                 ProducerRecord<String, byte[]> record = new ProducerRecord<>("invalide_channel",null, SerializedMessage);
                 producer.send(record);
                 System.out.println("invalid Message from " + weatherData.getStation_id());
                 return;
             }
-            sPWriter.addMessage(weatherData);
+            dWriterHadoop.addMessage(r);
         } catch (IOException e) {
             e.printStackTrace();
         }

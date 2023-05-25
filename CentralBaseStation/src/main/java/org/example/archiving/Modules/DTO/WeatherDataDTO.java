@@ -41,7 +41,7 @@ public class WeatherDataDTO {
             return weatherData;
         }
     }
-    private GenericRecord getWeather(byte[] avroData) throws IOException{
+    public GenericRecord getWeather(byte[] avroData) throws IOException{
         Decoder decoder = DecoderFactory.get().binaryDecoder(avroData, null);
         DatumReader<GenericRecord> datumReader = new SpecificDatumReader<>(schema);
         GenericRecord record = datumReader.read(null, decoder);
