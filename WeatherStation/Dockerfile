@@ -10,6 +10,6 @@ RUN mvn -f pom.xml clean package
 # Package stage
 #
 FROM openjdk:16
-COPY ./WeatherStation.jar .
+COPY out/artifacts/Weather_Station_jar/Weather-Station.jar .
 EXPOSE 9092
-ENTRYPOINT ["java","-jar","WeatherStation.jar","1"]
+ENTRYPOINT ["java","-jar","Weather-Station.jar"]

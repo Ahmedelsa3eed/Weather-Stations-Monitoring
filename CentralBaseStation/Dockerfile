@@ -15,6 +15,6 @@ FROM openjdk:16
 #RUN tar -xzf spark-3.4.0-bin-hadoop3.gz
 #RUN mv spark-3.4.0-bin-hadoop3.gz spark
 
-COPY ./CentralBaseStation.jar .
+COPY out/artifacts/Base_Station_jar/Base-Station.jar .
 EXPOSE 9092
-ENTRYPOINT ["java","-jar","CentralBaseStation.jar"]
+ENTRYPOINT ["java","-jar","Base-Station.jar"]

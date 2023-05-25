@@ -17,7 +17,7 @@ public class App
 {
     public static void main( String[] args )
     {
-        int station_id = 5;
+        int station_id = Integer.parseInt(args[0]);
         System.out.println("Starting with station_id = " + station_id);
         Properties properties = new Properties();
         properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
