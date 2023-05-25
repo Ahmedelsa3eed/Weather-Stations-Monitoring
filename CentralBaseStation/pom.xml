@@ -34,7 +34,6 @@
     <groupId>org.apache.spark</groupId>
     <artifactId>spark-mllib_2.13</artifactId>
     <version>3.4.0</version>
-    <scope>provided</scope>
 </dependency>
  <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-avro -->
 <dependency>
@@ -54,7 +53,6 @@
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-sql_2.13</artifactId>
         <version>3.4.0</version>
-        <scope>provided</scope>
     </dependency>
 <!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
 <dependency>

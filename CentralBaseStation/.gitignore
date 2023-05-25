@@ -2,3 +2,5 @@ target
 bitcask
 Archive
 src/main/resources/*.avro
+spark/**
+**.jar
