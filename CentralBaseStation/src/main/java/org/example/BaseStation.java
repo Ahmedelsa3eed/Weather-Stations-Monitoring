@@ -33,12 +33,14 @@ public class BaseStation {
     static KafkaProducer<String, byte[]> producer;
     ParquetWriterHadoop dWriterHadoop = null;
     TimeStampHandler timeStampHandler;
+    ElasticSearchProducer elasticSearch;
     public BaseStation() {
         bitcask = new Bitcask();
         wDto = new WeatherDataDTO(avroSchema);
         timeStampHandler = new TimeStampHandler();
         dWriterHadoop = new ParquetWriterHadoop();
         msgValidator = new MessageValidator(timeStampHandler);
+        elasticSearch = new ElasticSearchProducer();
     }
     public void consumeMessages() {
         String bootstrapServers = "localhost:9092";
@@ -50,7 +52,8 @@ public class BaseStation {
         propertiesConsumer.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         propertiesConsumer.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         propertiesConsumer.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-         KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(propertiesConsumer);
+        KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(propertiesConsumer);
+        consumer.subscribe(Collections.singletonList(topic));
 
         // producer to invalidate weather Data 
         Properties propertiesProducer = new Properties();
@@ -58,14 +61,11 @@ public class BaseStation {
         propertiesProducer.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         propertiesProducer.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         producer = new KafkaProducer<>(propertiesProducer);
-        consumer.subscribe(Collections.singletonList(topic));
             
         try {
             while (true) {
                 ConsumerRecords<String, byte[]> records = consumer.poll(Duration.ofMillis(500));
-                records.forEach(record -> {
-                    processMessage(record.value());
-                });
+                records.forEach(record -> processMessage(record.value()));
             }
         } finally {
             consumer.close();
@@ -74,20 +74,18 @@ public class BaseStation {
 
     private void processMessage(byte[] SerializedMessage) {
         WeatherData weatherData;
-        ElasticSearchProducer elasticSearch = new ElasticSearchProducer();
         try {
             weatherData = wDto.map(SerializedMessage);
             GenericRecord r = wDto.getWeather(SerializedMessage);
             if(msgValidator.notValidate(weatherData)){
                 ProducerRecord<String, byte[]> record = new ProducerRecord<>("invalide_channel",null, SerializedMessage);
                 producer.send(record);
-                elasticSearch.send(weatherData, "invalid");
                 System.out.println("invalid Message from " + weatherData.getStation_id());
                 return;
             }
             bitcask.put(SerializedMessage);
             dWriterHadoop.addMessage(r);
-            elasticSearch.send(weatherData, "stations-" + weatherData.getStation_id());
+            elasticSearch.processMessage(weatherData);
         } catch (IOException e) {
             e.printStackTrace();
         }
