@@ -9,12 +9,16 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
+
+import java.util.Arrays;
 import java.util.Properties;
+import java.util.Random;
 public class App 
 {
     public static void main( String[] args )
     {
-        int station_id = 1;
+        int station_id = Integer.parseInt(args[0]);
+        System.out.println("Starting with station_id = " + station_id);
         Properties properties = new Properties();
         properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
@@ -29,16 +33,19 @@ public class App
             GenericData.Record weatherData = msqHandler.createMessage(avroSchema, messageCount, station_id);
             byte[] array;
             try {
-                array = msqHandler.genericRecordToByteArray(weatherData,avroSchema);
-                ProducerRecord<String, byte[]> record = new ProducerRecord<>("try",null, array);
-                producer.send(record);
-                System.out.println("Success" + messageCount);
+                float dropProb = (float) Math.random();
+                if(dropProb > 0.1){
+                    array = msqHandler.genericRecordToByteArray(weatherData,avroSchema);
+                    ProducerRecord<String, byte[]> record = new ProducerRecord<>("try",null, array);
+                    producer.send(record);
+                    System.out.println("Success " + messageCount);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
             messageCount++;
             try {
-                Thread.sleep(1000); 
+                Thread.sleep(50); 
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

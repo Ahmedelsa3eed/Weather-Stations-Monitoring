@@ -45,13 +45,14 @@ public class MessageHandler {
         weatherData.put("station_id", station_id);
         weatherData.put("s_no", messageCount);
         String battery = randomBattery();
+        
         weatherData.put("battery_status", battery);
         weatherData.put("status_timestamp", System.currentTimeMillis());
 
         GenericData.Record weather = new GenericData.Record(schema.getField("weather").schema());
         weather.put("humidity", random.nextInt(101));
         // weather.put("humidity", 90);
-        weather.put("temperature", -20 + (40 + 20) * random.nextInt());
+        weather.put("temperature", random.nextInt(40 + 20) - 20);
         weather.put("wind_speed", random.nextInt(120 - 0 + 1) + 0);
 
         weatherData.put("weather", weather);

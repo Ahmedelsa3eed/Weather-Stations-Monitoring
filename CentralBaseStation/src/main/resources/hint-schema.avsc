@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "hintFile",
+  "fields": [
+    { "name": "statusTimestamp", "type": "long" },
+    { "name": "KeySize", "type": "long" },
+    { "name": "ValueSize", "type": "long" },
+    { "name": "valuePosition", "type": "long" },
+    { "name": "Key", "type": "long" }
+  ]
+}
