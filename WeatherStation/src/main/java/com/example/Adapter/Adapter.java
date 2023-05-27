@@ -57,7 +57,7 @@ public class Adapter {
                 }
                 messageCount++;
                 try {
-                    Thread.sleep(100); // Wait for 2 seconds before sending the next message
+                    Thread.sleep(1000); // Wait for 2 seconds before sending the next message
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

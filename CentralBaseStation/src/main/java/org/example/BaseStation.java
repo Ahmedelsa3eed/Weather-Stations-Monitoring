@@ -2,7 +2,6 @@ package org.example;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.generic.GenericData.Record;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -35,6 +34,7 @@ public class BaseStation {
     ParquetWriterHadoop dWriterHadoop = null;
     TimeStampHandler timeStampHandler;
     String bootstrapServers;
+    ElasticSearchProducer elasticSearch;
     public BaseStation() {
         bitcask = new Bitcask();
         wDto = new WeatherDataDTO(avroSchema);
@@ -42,6 +42,7 @@ public class BaseStation {
         dWriterHadoop = new ParquetWriterHadoop();
         msgValidator = new MessageValidator(timeStampHandler);
         bootstrapServers = "kafka-service:9092";
+        elasticSearch = new ElasticSearchProducer();
     }
     public void consumeMessages() {
 //        String bootstrapServers = System.getenv("KAFKA_URL");
@@ -53,22 +54,20 @@ public class BaseStation {
         propertiesConsumer.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         propertiesConsumer.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         propertiesConsumer.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-         KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(propertiesConsumer);
+        KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(propertiesConsumer);
+        consumer.subscribe(Collections.singletonList(topic));
 
         // producer to invalidate weather Data 
         Properties propertiesProducer = new Properties();
-        propertiesProducer.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        propertiesProducer.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka-service:9092");
         propertiesProducer.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         propertiesProducer.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         producer = new KafkaProducer<>(propertiesProducer);
-        consumer.subscribe(Collections.singletonList(topic));
             
         try {
             while (true) {
                 ConsumerRecords<String, byte[]> records = consumer.poll(Duration.ofMillis(500));
-                records.forEach(record -> {
-                    processMessage(record.value());
-                });
+                records.forEach(record -> processMessage(record.value()));
             }
         } finally {
             consumer.close();
@@ -88,6 +87,7 @@ public class BaseStation {
             }
             bitcask.put(SerializedMessage);
             dWriterHadoop.addMessage(r);
+            elasticSearch.processMessage(weatherData);
         } catch (IOException e) {
             e.printStackTrace();
         }

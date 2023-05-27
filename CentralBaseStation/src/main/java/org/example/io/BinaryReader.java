@@ -44,8 +44,8 @@ public class BinaryReader {
             byte[] weatherMessage = new byte[valueSize];
             activeFile.read(weatherMessage);
             return new Entry(key, weatherMessage, timestamp);
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException | NegativeArraySizeException e) {
+            System.out.println("Error while reading value, invalid entry");
         }
         return null;
     }
@@ -56,13 +56,14 @@ public class BinaryReader {
             long timestamp = activeFile.readLong();
             byte keySize = activeFile.readByte();
             int valueSize = activeFile.readInt();
+            if(keySize < 0) return null;
             byte[] keyBuffer = new byte[keySize];
             activeFile.read(keyBuffer);
             long key = ByteUtils.longFromCompressedBytes(keyBuffer);
             byte[] weatherMessage = new byte[valueSize];
             activeFile.read(weatherMessage);
             return new Entry(key, weatherMessage, timestamp);
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.out.println("Reached end of file " + activeFile.toString());
         }
         return null;
