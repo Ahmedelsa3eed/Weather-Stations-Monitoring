@@ -1,0 +1,33 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: base-station-deployment
+  labels:
+    app: base-station
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: base-station
+  template:
+    metadata:
+      labels:
+        app: base-station
+    spec:
+      volumes:
+        - name: base-station-storage
+          persistentVolumeClaim:
+            claimName: base-volume-claim
+      containers:
+        - name: base-station
+          image: base-station:1.0
+          imagePullPolicy: Never
+          env:
+            - name: KAFKA_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: kafka-url
+          volumeMounts:
+            - mountPath: "/base/"
+              name: base-station-storage
