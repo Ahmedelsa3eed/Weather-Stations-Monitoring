@@ -24,7 +24,7 @@ public class ElasticSearchProducer {
         this.client = builder.build();
     }
 
-    public boolean processMessage(WeatherData weatherData) {
+    private void processMessage(WeatherData weatherData) {
         if (!validSeqNumber) {
             expectedSequenceNumber = weatherData.getS_no();
             validSeqNumber = true;
@@ -48,7 +48,6 @@ public class ElasticSearchProducer {
             // Update the expected sequence number to the current message
             expectedSequenceNumber = sequenceNumber + 1;
         }
-        return true;
     }
 
     private void handleDroppedMessages(long count, String index) {
@@ -66,7 +65,7 @@ public class ElasticSearchProducer {
         }
     }
 
-    private void send(WeatherData weatherData, String index) {
+    public void send(WeatherData weatherData, String index) {
         RestClientBuilder builder = RestClient
                 .builder(new HttpHost("localhost", 9200, "http"));
         try (RestClient client = builder.build()) {

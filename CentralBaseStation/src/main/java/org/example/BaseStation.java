@@ -92,7 +92,7 @@ public class BaseStation {
             }
             bitcask.put(SerializedMessage);
             dWriterHadoop.addMessage(r);
-            executorService.submit(() -> elasticSearch.processMessage(weatherData));
+            executorService.submit(() -> elasticSearch.send(weatherData, "stations"));
         } catch (IOException e) {
             e.printStackTrace();
         }
