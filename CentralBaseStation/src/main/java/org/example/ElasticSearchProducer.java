@@ -24,7 +24,7 @@ public class ElasticSearchProducer {
         this.client = builder.build();
     }
 
-    public void processMessage(WeatherData weatherData) {
+    public boolean processMessage(WeatherData weatherData) {
         if (!validSeqNumber) {
             expectedSequenceNumber = weatherData.getS_no();
             validSeqNumber = true;
@@ -33,7 +33,7 @@ public class ElasticSearchProducer {
 
         if (sequenceNumber == expectedSequenceNumber) {
             // Send to elastic-search
-            String index = "stations-" + weatherData.getStation_id();
+            String index = "station-" + weatherData.getStation_id();
             send(weatherData, index);
             // Update the expected sequence number
             expectedSequenceNumber++;
@@ -42,16 +42,18 @@ public class ElasticSearchProducer {
             // Calculate the number of dropped messages
             long droppedMessages = sequenceNumber - expectedSequenceNumber;
 
-            handleDroppedMessages(droppedMessages);
+            String index = "dropped-station-" + weatherData.getStation_id();
+            handleDroppedMessages(droppedMessages, index);
 
             // Update the expected sequence number to the current message
             expectedSequenceNumber = sequenceNumber + 1;
         }
+        return true;
     }
 
-    private void handleDroppedMessages(long count) {
+    private void handleDroppedMessages(long count, String index) {
         try {
-            Request request = new Request("POST", "/dropped/_doc");
+            Request request = new Request("POST", "/" + index + "/_doc");
             String jsonPayload = "{\"count\": " + count + "}";
             request.setJsonEntity(jsonPayload);
             Response response = client.performRequest(request);
