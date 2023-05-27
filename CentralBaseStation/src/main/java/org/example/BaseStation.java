@@ -22,6 +22,10 @@ import java.time.Duration;
 
 import java.util.Collections;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 
 public class BaseStation {
@@ -34,7 +38,8 @@ public class BaseStation {
     ParquetWriterHadoop dWriterHadoop = null;
     TimeStampHandler timeStampHandler;
     String bootstrapServers;
-    ElasticSearchProducer elasticSearch;
+    private final ExecutorService executorService;
+    private final ElasticSearchProducer elasticSearch;
     public BaseStation() {
         bitcask = new Bitcask();
         wDto = new WeatherDataDTO(avroSchema);
@@ -43,6 +48,7 @@ public class BaseStation {
         msgValidator = new MessageValidator(timeStampHandler);
         bootstrapServers = "kafka-service:9092";
         elasticSearch = new ElasticSearchProducer();
+        executorService = Executors.newSingleThreadExecutor();
     }
     public void consumeMessages() {
 //        String bootstrapServers = System.getenv("KAFKA_URL");
@@ -71,6 +77,7 @@ public class BaseStation {
             }
         } finally {
             consumer.close();
+            executorService.shutdown();
         }
     }
 
@@ -87,7 +94,7 @@ public class BaseStation {
             }
             bitcask.put(SerializedMessage);
             dWriterHadoop.addMessage(r);
-            elasticSearch.processMessage(weatherData);
+            executorService.submit(() -> elasticSearch.send(weatherData, "stations"));
         } catch (IOException e) {
             e.printStackTrace();
         }
