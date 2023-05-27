@@ -34,15 +34,17 @@ public class BaseStation {
     static KafkaProducer<String, byte[]> producer;
     ParquetWriterHadoop dWriterHadoop = null;
     TimeStampHandler timeStampHandler;
+    String bootstrapServers;
     public BaseStation() {
         bitcask = new Bitcask();
         wDto = new WeatherDataDTO(avroSchema);
         timeStampHandler = new TimeStampHandler();
         dWriterHadoop = new ParquetWriterHadoop();
         msgValidator = new MessageValidator(timeStampHandler);
+        bootstrapServers = "kafka-service:9092";
     }
     public void consumeMessages() {
-        String bootstrapServers = "localhost:9092";
+//        String bootstrapServers = System.getenv("KAFKA_URL");
         String groupId = "my-consumer-group";
         String topic = "try";
         // consumer config to consume message
@@ -92,6 +94,7 @@ public class BaseStation {
     }
 
     public static void main(String[] args) {
+        System.out.println(System.getenv("KAFKA_URL"));
         BaseStation baseStation = new BaseStation();
         
         baseStation.consumeMessages();
