@@ -1,0 +1,23 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: stream-deployment
+  labels:
+    app: stream
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stream
+  template:
+    metadata:
+      labels:
+        app: stream
+    spec:
+      containers:
+        - name: stream
+          image: kstream:1.0
+          imagePullPolicy: Never
+          env:
+            - name: KAFKA_URL
+              value: kafka-service

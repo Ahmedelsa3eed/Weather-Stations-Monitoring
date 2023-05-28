@@ -36,7 +36,7 @@ public class Kstream {
     streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, "Raining_Triggers");
     streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, "Raining_Triggers-client");
     // Where to find Kafka broker(s).
-    streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+    streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka-service:9092");
     // Specify default (de)serializers for record keys and for record values.
     streamsConfiguration.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
     streamsConfiguration.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass());

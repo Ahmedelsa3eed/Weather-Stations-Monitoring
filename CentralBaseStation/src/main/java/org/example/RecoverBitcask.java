@@ -58,9 +58,7 @@ public class RecoverBitcask{
             try {
                 System.out.println(entry.getValue().toString());
                 System.out.println("ID = " + entry.getKey() + "\n\t VAL = " + AvroIO.deserialize(get(keyDir, entry.getKey())));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) {}
         }
 
         return keyDir;

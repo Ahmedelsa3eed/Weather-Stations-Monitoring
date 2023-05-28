@@ -1,0 +1,23 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: remote-station-deployment
+  labels:
+    app: remote-station
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: remote-station
+  template:
+    metadata:
+      labels:
+        app: remote-station
+    spec:
+      containers:
+        - name: remote-station
+          image: remote-station:1.0
+          imagePullPolicy: Never
+          env:
+            - name: KAFKA_URL
+              value: kafka-service

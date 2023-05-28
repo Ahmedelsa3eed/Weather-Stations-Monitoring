@@ -20,7 +20,7 @@ public class Adapter {
         final static Schema avroSchema = new Schema.Parser().parse(avroSchemaString);
     public static void main(String[] args) {
         Properties properties = new Properties();
-        properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka-service:9092");
         properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
 
@@ -57,7 +57,7 @@ public class Adapter {
                 }
                 messageCount++;
                 try {
-                    Thread.sleep(15000); // Wait for 2 seconds before sending the next message
+                    Thread.sleep(1000); // Wait for 2 seconds before sending the next message
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

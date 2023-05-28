@@ -67,8 +67,9 @@ public class ParquetWriterHadoop {
   public void writeToParquet(List<GenericRecord> recordList, long station_id, LocalDateTime localDateTime) {
     // Path to Parquet file in HDFS
 
-    String s = System.getProperty("user.dir");
-    String now = s + "/" + "Archive" + "/" + localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE)+"/" + station_id;
+//    String s = System.getProperty("user.dir");
+    String now = "base/Archive" + "/" + localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE)+"/" + station_id;
+    System.out.println("writing in: " + now);
     ParquetWriter<GenericRecord> writer = null;
     // Creating ParquetWriter using builder
     try {
